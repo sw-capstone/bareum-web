@@ -1,0 +1,44 @@
+@font-face {
+  font-family: Pretendard;
+  src: url('/fonts/PretendardVariable.woff2') format('woff2');
+  font-weight: 45 920;
+  font-display: swap;
+}
+:root {
+  --navy-900: #0b2545;
+  --navy-800: #133365;
+  --navy-700: #1b4079;
+  --navy-500: #2e5a93;
+  --navy-100: #dce5f1;
+  --navy-50: #f0f4fa;
+  --teal-900: #0a4b54;
+  --teal-700: #0f7e8c;
+  --teal-500: #1fa2b3;
+  --teal-100: #d4eff3;
+  --teal-50: #ecf7f9;
+  --mint-100: #d8efe7;
+  --paper: #faf9f6;
+  --white: #ffffff;
+  --fog-50: #f5f6f8;
+  --fog-100: #edeff3;
+  --fog-200: #e4e8ee;
+  --fog-300: #c9d0da;
+  --fog-500: #8a95a5;
+  --fog-700: #526074;
+  --ink-900: #0b1b2b;
+  --ink-700: #263548;
+  --ink-500: #526074;
+  --high: #d64545;
+  --high-soft: #fdecec;
+  --medium: #e08a1e;
+  --medium-soft: #fcefd8;
+  --low: #2e9e5a;
+  --low-soft: #e1f2e7;
+  --radius-sm: 3px;
+  --radius: 4px;
+  --radius-lg: 6px;
+  --shadow-sm: 0 1px 3px rgba(11, 27, 43, 0.06), 0 1px 2px rgba(11, 27, 43, 0.04);
+  --shadow-md: 0 4px 12px rgba(11, 27, 43, 0.08), 0 2px 4px rgba(11, 27, 43, 0.04);
+  --shadow-lg: 0 12px 28px rgba(11, 27, 43, 0.1), 0 4px 8px rgba(11, 27, 43, 0.04);
+  --font: Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif;
+}
