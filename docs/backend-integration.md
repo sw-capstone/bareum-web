@@ -40,7 +40,7 @@
 
 `GET /analyses/:id/result`
 
-정확한 타입과 검증 규칙은 `src/services/contracts.ts`를 단일 기준으로 사용합니다.
+서버의 공개 API 계약이 확정되면 `bareum-server/packages/contracts/`에서 관리하고, 프론트는 필요한 공개 필드·상태·오류 형식을 `src/services/contracts.ts`에서 검증합니다. 계약 변경 시 서버 원본과 화면 소비 코드를 함께 검토합니다.
 
 ### 이슈 상태 변경
 
