@@ -1,8 +1,8 @@
-name: frontend-ci
+name: Harness
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, develop]
 jobs:
   check:
     runs-on: ubuntu-latest
