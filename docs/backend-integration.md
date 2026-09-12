@@ -17,8 +17,6 @@
 
 - `file` 또는 `text` 중 하나
 - `documentType`: 문서 유형
-- `scopes`: JSON 문자열 배열
-- `maskingFields`: JSON 문자열 배열
 
 응답: `{ "analysisId": "string" }`
 

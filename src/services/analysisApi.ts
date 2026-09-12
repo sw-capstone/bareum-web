@@ -13,8 +13,6 @@ export interface AnalysisRequest {
   file?: File;
   text?: string;
   documentType: string;
-  scopes: string[];
-  maskingFields: string[];
 }
 
 const wait = (ms: number, signal?: AbortSignal) =>
@@ -40,8 +38,6 @@ export const analysisApi = {
     if (input.file) body.append('file', input.file);
     if (input.text) body.append('text', input.text);
     body.append('documentType', input.documentType);
-    body.append('scopes', JSON.stringify(input.scopes));
-    body.append('maskingFields', JSON.stringify(input.maskingFields));
     const data = await request<unknown>('/analyses', { method: 'POST', body }, signal);
     return startAnalysisResponseSchema.parse(data);
   },
