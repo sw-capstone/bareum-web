@@ -32,7 +32,6 @@ export function LoginPage({ onLogin }: { onLogin: (u: User) => void }) {
         </div>
         <div className="login-meta">
           <span>HWPX · DOCX · PDF</span>
-          <span>개인정보 자동 마스킹</span>
           <span>최대 20MB</span>
         </div>
       </section>

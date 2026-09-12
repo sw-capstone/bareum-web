@@ -117,8 +117,7 @@ svg {
   gap: 7px;
 }
 .field > span,
-.select-field > span,
-.scope > span {
+.select-field > span {
   font-size: 13px;
   font-weight: 600;
   color: var(--ink-900);
@@ -539,10 +538,8 @@ svg {
   resize: vertical;
   background: var(--paper);
 }
-.config-grid {
-  display: grid;
-  grid-template-columns: 320px 1fr;
-  gap: 32px;
+.document-config {
+  max-width: 320px;
   margin-top: 28px;
 }
 .select-field {
@@ -551,12 +548,6 @@ svg {
 }
 .select-field select {
   appearance: auto;
-}
-.scope > div {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px 20px;
-  margin-top: 10px;
 }
 .submit-row {
   margin-top: 30px;
@@ -610,11 +601,6 @@ svg {
   font-size: 22px;
   font-weight: 700;
   flex: none;
-}
-.mask-options {
-  display: grid;
-  gap: 14px;
-  padding: 24px 28px;
 }
 .modal-actions {
   padding: 16px 24px;
@@ -1643,98 +1629,11 @@ h3 {
 .paper h3 {
   border-bottom: 1px solid rgba(15, 126, 140, 0.24);
 }
-.manuscript-modal {
-  width: min(760px, 94vw);
-  overflow: hidden;
-}
-.mask-title-area {
-  position: relative;
-  min-height: 250px;
-  padding: 42px 64px 36px;
-  display: grid;
-  grid-template-columns: 1fr;
-  align-items: start;
-  border-bottom: 1px solid var(--fog-300);
-  background-color: var(--paper);
-  background-image:
-    linear-gradient(rgba(15, 126, 140, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(15, 126, 140, 0.05) 1px, transparent 1px);
-  background-size: 20px 20px;
-}
 .document-kicker {
   color: var(--teal-700);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.12em;
-}
-.mask-title-area h2 {
-  margin: 10px 0 12px;
-  font-size: 34px;
-  line-height: 1.3;
-}
-.mask-title-area div > p:last-child {
-  color: var(--ink-500);
-  font-size: 13px;
-}
-.privacy-stamp {
-  position: absolute;
-  right: 34px;
-  bottom: 28px;
-  width: 54px;
-  height: 54px;
-  border: 2px solid rgba(15, 126, 140, 0.5);
-  color: var(--teal-700);
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  font-family: Batang, serif;
-  font-weight: 700;
-  transform: rotate(-9deg);
-  opacity: 0.75;
-}
-.manuscript-modal .mask-options {
-  padding: 0 64px 26px;
-  gap: 0;
-  background: var(--white);
-}
-.mask-options-head {
-  height: 38px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-bottom: 1px solid var(--ink-700);
-  color: var(--ink-500);
-  font-size: 10px;
-  letter-spacing: 0.08em;
-}
-.mask-row {
-  min-height: 68px;
-  display: grid;
-  grid-template-columns: 38px 1fr auto;
-  align-items: center;
-  border-bottom: 1px solid var(--fog-200);
-}
-.mask-number {
-  font:
-    16px Georgia,
-    serif;
-  color: var(--teal-700);
-}
-.mask-row > div {
-  display: grid;
-}
-.mask-row strong {
-  font-size: 14px;
-  color: var(--ink-900);
-}
-.mask-row small {
-  margin-top: 2px;
-  color: var(--ink-500);
-  font-size: 10px;
-}
-.manuscript-modal .modal-actions {
-  padding: 18px 64px;
-  background: var(--fog-50);
 }
 .manuscript-analysis {
   max-width: 980px;
@@ -1980,23 +1879,6 @@ h3 {
     flex: 1;
   }
 
-  .mask-title-area {
-    padding: 30px 24px;
-    grid-template-columns: 1fr;
-  }
-  .mask-title-area h2 {
-    font-size: 25px;
-  }
-  .privacy-stamp {
-    display: none;
-  }
-  .manuscript-modal .mask-options {
-    padding: 0 24px 18px;
-  }
-  .manuscript-modal .modal-actions {
-    padding: 14px 24px;
-    flex-wrap: wrap;
-  }
   .analysis-sheet-body {
     grid-template-columns: 66px 1fr;
   }
@@ -2041,9 +1923,6 @@ h3 {
   }
   .login-form {
     padding: 40px 24px;
-  }
-  .config-grid {
-    grid-template-columns: 1fr;
   }
   .submit-row {
     align-items: flex-end;
@@ -2137,7 +2016,6 @@ body {
 .report-board,
 .dropzone,
 .paper,
-.mask-title-area,
 .analysis-vertical-title {
   background-image: none;
 }
@@ -2184,25 +2062,6 @@ body {
 
 .score-strip {
   border-top: 1px solid var(--fog-200);
-}
-
-.mask-title-area {
-  min-height: 190px;
-  padding-top: 34px;
-  background: var(--paper);
-  border-bottom-color: var(--fog-200);
-}
-
-.mask-title-area::after {
-  display: none;
-}
-
-.privacy-stamp {
-  display: none;
-}
-
-.manuscript-modal .mask-options {
-  padding-top: 10px;
 }
 
 .analysis-sheet {
@@ -2265,10 +2124,6 @@ body {
 @media (max-width: 720px) {
   .page-heading::after {
     width: 168px;
-  }
-
-  .mask-title-area::after {
-    display: none;
   }
 
   .analysis-main {
