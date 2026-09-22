@@ -3,6 +3,7 @@ import { useState, type ReactNode } from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import { AppErrorBoundary } from '../components/AppErrorBoundary';
 import { SessionProvider } from '../contexts/SessionProvider';
+import { SignupFlowProvider } from '../features/auth/SignupFlowProvider';
 export function AppProviders({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
     () =>
@@ -12,7 +13,9 @@ export function AppProviders({ children }: { children: ReactNode }) {
     <AppErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <SessionProvider>
-          <BrowserRouter>{children}</BrowserRouter>
+          <SignupFlowProvider>
+            <BrowserRouter>{children}</BrowserRouter>
+          </SignupFlowProvider>
         </SessionProvider>
       </QueryClientProvider>
     </AppErrorBoundary>

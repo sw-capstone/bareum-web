@@ -1,10 +1,21 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import type { User } from '../types';
+import { userSchema } from '../services/contracts';
 import { SessionContext } from './session';
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(() => {
-    const saved = sessionStorage.getItem('bareum:user');
-    return saved ? JSON.parse(saved) : null;
+    try {
+      const saved = sessionStorage.getItem('bareum:user');
+      if (!saved) return null;
+      const parsed: unknown = JSON.parse(saved);
+      const result = userSchema.safeParse(parsed);
+      if (result.success) return result.data;
+      sessionStorage.removeItem('bareum:user');
+      return null;
+    } catch {
+      sessionStorage.removeItem('bareum:user');
+      return null;
+    }
   });
   const value = useMemo(
     () => ({
