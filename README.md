@@ -40,7 +40,7 @@ npm run check
 
 브랜드 로고는 아직 확정되지 않아 `Brand` 컴포넌트가 텍스트 기반 임시 마크를 사용합니다. 추후 이 컴포넌트만 교체하면 됩니다.
 
-상세 API 계약과 협업 규칙은 [`docs/backend-integration.md`](docs/backend-integration.md)를 참고하세요.
+현재 API 연동 가정과 프론트 협업 규칙은 [`docs/backend-integration.md`](docs/backend-integration.md)를 참고하세요. 확정된 서버 계약은 아직 아닙니다.
 
 개발·하네스 사용법은 `sw-capstone/bareum-server/docs/guide/development-guide.md`를 먼저 읽습니다.
 
