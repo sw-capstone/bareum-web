@@ -15,7 +15,7 @@ npm run dev
 npm run check
 ```
 
-포맷, ESLint, 단위 테스트, TypeScript 검사와 프로덕션 빌드를 한 번에 실행합니다.
+`check`는 포맷, ESLint, 단위 테스트, TypeScript 검사와 프로덕션 빌드를 실행합니다. 공개 계약을 소비하는 코드는 서버 계약의 필드·상태·오류 형식에 맞춰 검토합니다.
 
 ## 백엔드 연동
 
@@ -23,6 +23,7 @@ npm run check
 - 현재 `VITE_USE_MOCK_API=true`에서는 샘플 데이터로 전체 흐름을 확인할 수 있습니다.
 - 실제 API 연동은 `.env`의 `VITE_USE_MOCK_API=false`로 전환합니다.
 - 응답 데이터는 `src/services/contracts.ts`의 Zod 스키마로 런타임 검증합니다.
+- 서버 공개 계약 변경은 이 레포의 소비 코드와 함께 검토합니다. 계약 스냅샷과 동기화 자동화는 계약 운영 방식에 맞춰 관리합니다.
 - HTTP 오류는 `ApiError` 한 종류로 표준화합니다.
 - 예상 흐름: `POST /analyses` → `GET /analyses/:id` 폴링 → `GET /analyses/:id/result` → 이슈 변경/내보내기 API.
 
@@ -40,3 +41,7 @@ npm run check
 브랜드 로고는 아직 확정되지 않아 `Brand` 컴포넌트가 텍스트 기반 임시 마크를 사용합니다. 추후 이 컴포넌트만 교체하면 됩니다.
 
 상세 API 계약과 협업 규칙은 [`docs/backend-integration.md`](docs/backend-integration.md)를 참고하세요.
+
+개발·하네스 사용법은 `sw-capstone/bareum-server/docs/guide/development-guide.md`를 먼저 읽습니다.
+
+계약 변경은 `sw-capstone/bareum-server`의 계약 변경 PR과 함께 검토합니다.

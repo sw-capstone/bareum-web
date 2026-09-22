@@ -170,6 +170,7 @@ function ResultRoute() {
   if (query.isError || !query.data) return <PageError onRetry={() => query.refetch()} />;
   return (
     <ResultPage
+      key={id}
       result={query.data}
       analysisId={id}
       onReport={() => navigate(`/analyses/${id}/report`)}
