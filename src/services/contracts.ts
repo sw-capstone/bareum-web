@@ -2,6 +2,14 @@ import { z } from 'zod';
 
 export const severitySchema = z.enum(['high', 'medium', 'low', 'pending']);
 export const issueStatusSchema = z.enum(['open', 'resolved', 'ignored']);
+export const userSchema = z.object({ name: z.string().min(1), email: z.string().email() });
+export const loginResponseSchema = z.object({ user: userSchema });
+export const sendVerificationResponseSchema = z.object({
+  expiresIn: z.number().int().positive(),
+});
+export const verifyEmailResponseSchema = z.object({
+  verificationToken: z.string().min(1),
+});
 
 const evidenceSchema = z.object({ source: z.string(), quote: z.string() });
 const segmentSchema = z.object({

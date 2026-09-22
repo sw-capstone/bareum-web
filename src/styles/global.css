@@ -135,6 +135,54 @@ svg {
   color: var(--high);
   font-size: 12px;
 }
+.password-input {
+  position: relative;
+  display: block;
+}
+.password-input input {
+  width: 100%;
+  padding-right: 46px;
+}
+.password-input input::-webkit-credentials-auto-fill-button,
+.password-input input::-webkit-contacts-auto-fill-button {
+  position: absolute;
+  right: 0;
+  display: none !important;
+  visibility: hidden;
+  pointer-events: none;
+}
+.password-input input::-ms-reveal,
+.password-input input::-ms-clear {
+  display: none;
+}
+.password-input button {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink-500);
+  opacity: 0.55;
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+.password-input button:hover,
+.password-input button:focus-visible {
+  opacity: 0.9;
+}
+.password-input button:focus-visible {
+  outline: 2px solid var(--teal-700);
+  outline-offset: 1px;
+}
+.password-input svg {
+  width: 18px;
+  height: 18px;
+}
 .check {
   position: relative;
   display: inline-flex;
@@ -359,6 +407,9 @@ svg {
   align-items: center;
   justify-content: space-between;
   margin-top: -2px;
+}
+.form-row .text-link {
+  font-size: 13px;
 }
 .text-link {
   border: 0;
