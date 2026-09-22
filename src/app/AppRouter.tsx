@@ -15,6 +15,10 @@ import { useSession } from '../contexts/session';
 import { useAnalysisProgress, useAnalysisResult, useStartAnalysis } from '../hooks/useAnalysis';
 import type { Screen } from '../types';
 import { LoginPage } from '../features/auth/LoginPage';
+import { PasswordResetPage } from '../features/auth/PasswordResetPage';
+import { SignupPage } from '../features/auth/SignupPage';
+import { TermsPage } from '../features/auth/TermsPage';
+import { useSignupFlow } from '../features/auth/signupFlow';
 import { UploadPage } from '../features/upload/UploadPage';
 import { AnalysisPage, FailedPage } from '../features/analysis/AnalysisPage';
 import { ResultPage } from '../features/result/ResultPage';
@@ -22,6 +26,7 @@ import { ReportPage } from '../features/report/ReportPage';
 import { ExportDialog } from '../features/export/ExportDialog';
 import { SettingsPage } from '../features/settings/SettingsPage';
 import type { ExportKind } from '../services/exportApi';
+import { authApi } from '../services/authApi';
 
 function screenFor(pathname: string): Screen {
   if (pathname.startsWith('/settings')) return 'settings';
@@ -56,9 +61,13 @@ function AppShell() {
           }
           navigate(s === 'upload' ? '/upload' : '/');
         }}
-        onLogout={() => {
-          logout();
-          navigate('/login');
+        onLogout={async () => {
+          try {
+            await authApi.logout();
+          } finally {
+            logout();
+            navigate('/login');
+          }
         }}
       />
       <Outlet context={{ openExport }} />
@@ -72,15 +81,25 @@ function AppShell() {
     </>
   );
 }
+function RequireSession() {
+  const { user } = useSession();
+  if (!user) return <Navigate to="/login" replace />;
+  return <AppShell />;
+}
 function LoginRoute() {
   const { login } = useSession();
+  const { clearDraft } = useSignupFlow();
   const navigate = useNavigate();
+  useEffect(() => clearDraft(), [clearDraft]);
   return (
     <LoginPage
-      onLogin={(user) => {
+      onForgotPassword={() => navigate('/forgot-password')}
+      onLogin={async (credentials) => {
+        const user = await authApi.login(credentials);
         login(user);
         navigate('/upload');
       }}
+      onSignup={() => navigate('/signup')}
     />
   );
 }
@@ -178,7 +197,10 @@ export function AppRouter() {
     <Routes>
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/login" element={<LoginRoute />} />
-      <Route element={<AppShell />}>
+      <Route path="/signup" element={<SignupPage />} />
+      <Route path="/terms" element={<TermsPage />} />
+      <Route path="/forgot-password" element={<PasswordResetPage />} />
+      <Route element={<RequireSession />}>
         <Route path="/upload" element={<UploadRoute />} />
         <Route path="/settings" element={<SettingsRoute />} />
         <Route path="/analyses/:id" element={<AnalysisRoute />} />

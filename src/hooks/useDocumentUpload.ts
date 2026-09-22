@@ -7,8 +7,6 @@ interface UploadState {
   file: File | null;
   text: string;
   documentType: string;
-  scopes: string[];
-  maskingFields: string[];
   isDragging: boolean;
 }
 type Action =
@@ -16,8 +14,6 @@ type Action =
   | { type: 'file'; value: File | null }
   | { type: 'text'; value: string }
   | { type: 'documentType'; value: string }
-  | { type: 'toggleScope'; value: string }
-  | { type: 'toggleMask'; value: string }
   | { type: 'drag'; value: boolean };
 
 const initialState: UploadState = {
@@ -25,14 +21,8 @@ const initialState: UploadState = {
   file: null,
   text: '',
   documentType: '계획 보고서',
-  scopes: ['all'],
-  maskingFields: ['rrn', 'phone', 'account'],
   isDragging: false,
 };
-
-function toggle(values: string[], value: string) {
-  return values.includes(value) ? values.filter((item) => item !== value) : [...values, value];
-}
 
 function reducer(state: UploadState, action: Action): UploadState {
   switch (action.type) {
@@ -44,29 +34,16 @@ function reducer(state: UploadState, action: Action): UploadState {
       return { ...state, text: action.value };
     case 'documentType':
       return { ...state, documentType: action.value };
-    case 'toggleScope':
-      if (action.value === 'all') {
-        return { ...state, scopes: state.scopes.includes('all') ? [] : ['all'] };
-      }
-      if (state.scopes.includes('all')) return state;
-      return { ...state, scopes: toggle(state.scopes, action.value) };
-    case 'toggleMask':
-      return { ...state, maskingFields: toggle(state.maskingFields, action.value) };
     case 'drag':
       return { ...state, isDragging: action.value };
   }
 }
 
-export function createAnalysisRequest(
-  state: UploadState,
-  maskingFields = state.maskingFields,
-): AnalysisRequest {
+export function createAnalysisRequest(state: UploadState): AnalysisRequest {
   return {
     file: state.tab === 'file' ? (state.file ?? undefined) : undefined,
     text: state.tab === 'text' ? state.text.trim() || undefined : undefined,
     documentType: state.documentType,
-    scopes: state.scopes,
-    maskingFields,
   };
 }
 
@@ -76,14 +53,11 @@ export function useDocumentUpload() {
     if (files?.[0]) dispatch({ type: 'file', value: files[0] });
   }, []);
   const isValid = useMemo(
-    () => Boolean(state.tab === 'file' ? state.file : state.text.trim()) && state.scopes.length > 0,
-    [state.file, state.scopes.length, state.tab, state.text],
+    () => Boolean(state.tab === 'file' ? state.file : state.text.trim()),
+    [state.file, state.tab, state.text],
   );
 
-  const createRequest = useCallback(
-    (maskingFields = state.maskingFields) => createAnalysisRequest(state, maskingFields),
-    [state],
-  );
+  const createRequest = useCallback(() => createAnalysisRequest(state), [state]);
 
   return { state, dispatch, selectFile, isValid, createRequest };
 }
