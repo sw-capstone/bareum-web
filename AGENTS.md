@@ -1,8 +1,9 @@
 # bareum-web 지침
 
 - 이 레포는 화면·사용자 입력·공개 API 소비를 담당한다.
-- `bareum-server`의 DB, AI 내부 구현, 하네스 구현을 직접 참조하지 않는다.
+- `bareum-server`의 DB와 하네스 구현, `bareum-server-ai`의 내부 구현을 직접 참조하지 않는다.
 - API 응답은 `src/services/contracts.ts`에서 런타임 검증한다.
+- 서버↔AI 내부 계약만 바뀌고 공개 API는 유지되는 경우 웹 변경은 필요하지 않다.
 - 서버 계약이 담당자에 의해 확정되면 `docs/backend-integration.md`와 프론트 소비 코드를 함께 검토한다.
 - 프론트엔드 품질 검사는 `npm run check`를 사용한다.
 - 공유 브랜치에 강제 푸시하지 않고 PR에서 변경 목적·검증 결과·남은 위험을 기록한다.

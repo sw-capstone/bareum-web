@@ -17,6 +17,10 @@ npm run check
 
 `check`는 포맷, ESLint, 단위 테스트, TypeScript 검사와 프로덕션 빌드를 실행합니다. 공개 계약을 소비하는 코드는 서버 계약의 필드·상태·오류 형식에 맞춰 검토합니다.
 
+## 저장소 경계
+
+`bareum-web`은 화면과 공개 API 소비를, `bareum-server`는 백엔드 API를, `bareum-server-ai`는 AI 처리를 담당합니다. 웹은 서버를 통해 연동하며 AI 내부 구현을 직접 참조하지 않습니다. 서버↔AI 계약만 변경되면 공개 API에 영향이 있는 경우에만 웹을 함께 수정합니다.
+
 ## 백엔드 연동
 
 - 환경 변수는 `.env.example`을 참고합니다.
@@ -40,7 +44,7 @@ npm run check
 
 브랜드 로고는 아직 확정되지 않아 `Brand` 컴포넌트가 텍스트 기반 임시 마크를 사용합니다. 추후 이 컴포넌트만 교체하면 됩니다.
 
-현재 API 연동 가정과 프론트 협업 규칙은 [`docs/backend-integration.md`](docs/backend-integration.md)를 참고하세요. 확정된 서버 계약은 아직 아닙니다.
+현재 API 연동 가정과 프론트 협업 규칙은 [`docs/backend-integration.md`](docs/backend-integration.md)를 참고하세요. 서버 계약이 확정되면 문서와 소비 코드를 함께 갱신합니다.
 
 개발·하네스 사용법은 `sw-capstone/bareum-server/docs/guide/development-guide.md`를 먼저 읽습니다.
 
