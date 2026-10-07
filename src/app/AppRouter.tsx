@@ -110,17 +110,13 @@ function UploadRoute() {
     <>
       <UploadPage
         isPending={start.isPending}
+        analysisError={start.isError}
         onAnalyze={(request) =>
           start.mutate(request, {
             onSuccess: ({ analysisId }) => navigate(`/analyses/${analysisId}`),
           })
         }
       />
-      {start.isError && (
-        <div role="alert" className="request-error">
-          분석 요청을 시작하지 못했습니다. 다시 시도해 주세요.
-        </div>
-      )}
     </>
   );
 }
