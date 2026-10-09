@@ -50,12 +50,32 @@ export const analysisResultSchema = z.object({
 });
 
 export const startAnalysisResponseSchema = z.object({ analysisId: z.string() });
+export const analysisCheckSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  status: z.enum(['pending', 'processing', 'completed', 'failed']),
+  errorCode: z.string().optional(),
+  errorMessage: z.string().optional(),
+  failedAt: z.string().optional(),
+});
 export const analysisProgressSchema = z.object({
-  status: z.enum(['queued', 'processing', 'completed', 'failed']),
+  status: z.enum([
+    'queued',
+    'processing',
+    'paused',
+    'completed',
+    'partial_failed',
+    'failed',
+    'canceled',
+  ]),
   progress: z.number().min(0).max(100),
   step: z.string(),
+  filename: z.string().optional(),
+  documentType: z.string().optional(),
+  checks: z.array(analysisCheckSchema).optional(),
   errorCode: z.string().optional(),
   errorMessage: z.string().optional(),
 });
 
+export type AnalysisCheck = z.infer<typeof analysisCheckSchema>;
 export type AnalysisProgress = z.infer<typeof analysisProgressSchema>;

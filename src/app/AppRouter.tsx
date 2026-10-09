@@ -12,7 +12,15 @@ import {
 import { Header } from '../components/Header';
 import { PageError, PageLoading } from '../components/AsyncState';
 import { useSession } from '../contexts/session';
-import { useAnalysisProgress, useAnalysisResult, useStartAnalysis } from '../hooks/useAnalysis';
+import {
+  useAnalysisProgress,
+  useAnalysisResult,
+  useCancelAnalysis,
+  usePauseAnalysis,
+  useResumeAnalysis,
+  useRetryAnalysis,
+  useStartAnalysis,
+} from '../hooks/useAnalysis';
 import type { Screen } from '../types';
 import { LoginPage } from '../features/auth/LoginPage';
 import { PasswordResetPage } from '../features/auth/PasswordResetPage';
@@ -27,6 +35,7 @@ import { ExportDialog } from '../features/export/ExportDialog';
 import { SettingsPage } from '../features/settings/SettingsPage';
 import type { ExportKind } from '../services/exportApi';
 import { authApi } from '../services/authApi';
+import { ApiError } from '../services/httpClient';
 
 function screenFor(pathname: string): Screen {
   if (pathname.startsWith('/settings')) return 'settings';
@@ -123,29 +132,71 @@ function UploadRoute() {
 function AnalysisRoute() {
   const { id = '' } = useParams();
   const navigate = useNavigate();
+  const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
   const progress = useAnalysisProgress(id);
+  const cancel = useCancelAnalysis();
+  const pause = usePauseAnalysis();
+  const resume = useResumeAnalysis();
   useEffect(() => {
-    if (progress.data?.status === 'completed')
+    if (!isCancelDialogOpen && progress.data?.status === 'completed')
       navigate(`/analyses/${id}/result`, { replace: true });
-    if (progress.data?.status === 'failed') navigate(`/analyses/${id}/failed`, { replace: true });
-  }, [id, navigate, progress.data?.status]);
+    if (
+      !isCancelDialogOpen &&
+      (progress.data?.status === 'partial_failed' || progress.data?.status === 'failed')
+    )
+      navigate(`/analyses/${id}/failed`, { replace: true });
+    if (progress.data?.status === 'canceled') navigate('/upload', { replace: true });
+  }, [id, isCancelDialogOpen, navigate, progress.data?.status]);
   if (progress.isError) return <PageError onRetry={() => progress.refetch()} />;
+  const analysis = progress.data ?? {
+    status: 'queued' as const,
+    progress: 0,
+    step: '분석 요청을 접수하고 있습니다',
+  };
+  const cancelError = cancel.error
+    ? cancel.error instanceof ApiError && cancel.error.code === 'ANALYSIS_ALREADY_COMPLETED'
+      ? '분석이 이미 완료되어 취소할 수 없습니다.'
+      : '분석 취소 요청을 처리하지 못했습니다. 다시 시도해 주세요.'
+    : undefined;
   return (
     <AnalysisPage
-      filename="갯벌축제_계획_v3.hwpx"
-      progress={Math.round(progress.data?.progress ?? 0)}
-      step={progress.data?.step ?? '문서 파싱'}
-      onFail={() => navigate(`/analyses/${id}/failed`)}
+      analysis={analysis}
+      cancelPending={cancel.isPending}
+      cancelError={cancelError}
+      pausePending={pause.isPending}
+      pauseError={pause.isError ? '분석을 일시 정지하지 못했습니다.' : undefined}
+      resumePending={resume.isPending}
+      resumeError={resume.isError ? '분석을 다시 시작하지 못했습니다.' : undefined}
+      onCancelDialogChange={setIsCancelDialogOpen}
+      onPause={() => pause.mutate(id)}
+      onResume={() => resume.mutate(id)}
+      onViewResult={() => navigate(`/analyses/${id}/result`)}
+      onCancel={() =>
+        cancel.mutate(id, {
+          onSuccess: () => navigate('/upload', { replace: true }),
+        })
+      }
     />
   );
 }
 function FailureRoute() {
   const { id = '' } = useParams();
   const navigate = useNavigate();
+  const progress = useAnalysisProgress(id);
+  const retry = useRetryAnalysis();
+  if (progress.isLoading) return <PageLoading label="실패 정보를 불러오고 있습니다" />;
+  if (progress.isError || !progress.data) return <PageError onRetry={() => progress.refetch()} />;
   return (
     <FailedPage
-      onRetry={() => navigate(`/analyses/${id}`)}
-      onDetail={() => navigate(`/analyses/${id}/result`)}
+      analysis={progress.data}
+      retryPending={retry.isPending}
+      onRetry={() =>
+        retry.mutate(id, {
+          onSuccess: ({ analysisId }) => navigate(`/analyses/${analysisId}`, { replace: true }),
+        })
+      }
+      onPartialResult={() => navigate(`/analyses/${id}/result`)}
+      onCancel={() => navigate('/upload', { replace: true })}
     />
   );
 }

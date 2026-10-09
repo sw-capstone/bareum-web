@@ -1873,6 +1873,9 @@ h3 {
   border-top: 1px solid var(--fog-300);
   border-bottom: 1px solid var(--fog-300);
 }
+.analysis-steps--six {
+  grid-template-columns: repeat(6, 1fr);
+}
 .analysis-steps li {
   min-height: 105px;
   padding: 18px 12px;
@@ -1909,6 +1912,10 @@ h3 {
   color: var(--low);
   background: var(--low-soft);
 }
+.analysis-steps li.completed {
+  color: var(--low);
+  background: var(--low-soft);
+}
 .analysis-steps li.active {
   color: var(--teal-900);
   background: var(--teal-50);
@@ -1917,6 +1924,108 @@ h3 {
   color: #fff;
   border-color: var(--teal-700);
   background: var(--teal-700);
+}
+.analysis-steps li.processing {
+  color: var(--navy-700);
+  background: var(--navy-50);
+}
+.analysis-steps li.processing > span {
+  color: #fff;
+  border-color: var(--navy-700);
+  background: var(--navy-700);
+}
+.analysis-steps li.failed {
+  color: var(--high);
+  background: var(--high-soft);
+}
+.analysis-steps li.failed > span {
+  color: #fff;
+  border-color: var(--high);
+  background: var(--high);
+}
+.analysis-current-status {
+  min-height: 58px;
+  padding: 12px 14px;
+  border: 1px solid var(--fog-200);
+  background: var(--fog-50);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.analysis-current-status > svg {
+  color: var(--teal-700);
+  flex: none;
+}
+.spinner {
+  animation: analysis-spin 0.9s linear infinite;
+}
+@keyframes analysis-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.analysis-current-status div {
+  display: grid;
+}
+.analysis-current-status strong {
+  color: var(--ink-900);
+  font-size: 13px;
+}
+.analysis-current-status span {
+  color: var(--fog-500);
+  font-size: 11px;
+}
+.analysis-actions {
+  margin-top: 24px;
+  display: flex;
+  justify-content: flex-end;
+}
+.cancel-modal {
+  width: min(520px, 100%);
+}
+.cancel-modal .modal-head {
+  position: relative;
+  align-items: flex-start;
+  justify-content: center;
+  padding-left: 84px;
+  padding-right: 84px;
+}
+.cancel-modal .modal-head > .modal-icon {
+  position: absolute;
+  top: 28px;
+  left: 28px;
+}
+.cancel-modal .modal-head > div {
+  width: fit-content;
+  text-align: left;
+}
+.cancel-modal .modal-head h2,
+.cancel-modal .modal-head p {
+  text-align: left;
+}
+.modal-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+.modal-icon.warning {
+  color: var(--medium);
+  background: var(--medium-soft);
+}
+.cancel-error {
+  margin: 0 24px;
+  padding: 13px 14px;
+  border: 1px solid rgba(214, 69, 69, 0.3);
+  background: var(--high-soft);
+  color: var(--high);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 13px;
 }
 .analysis-sheet footer {
   height: 42px;
@@ -1928,6 +2037,45 @@ h3 {
   color: var(--fog-500);
   font-size: 9px;
   letter-spacing: 0.08em;
+}
+
+.failure-page {
+  max-width: 780px;
+  padding-top: 72px;
+}
+.failure-document-type {
+  display: inline-flex;
+  margin-top: 18px;
+  padding: 5px 12px;
+  border: 1px solid var(--fog-300);
+  color: var(--ink-500);
+  font-size: 12px;
+}
+.failure-page .failure-card {
+  max-width: 680px;
+  border-radius: 3px;
+}
+.failure-detail {
+  grid-template-columns: 130px 1fr !important;
+}
+.failure-detail dt {
+  color: var(--high);
+  font-weight: 700;
+}
+.failure-detail dd {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 3px 14px;
+}
+.failure-detail dd span,
+.failure-detail dd b {
+  color: var(--fog-500);
+  font-size: 11px;
+  font-weight: 500;
+}
+.failure-detail dd p {
+  grid-column: 1 / -1;
+  color: var(--ink-700);
 }
 
 @media (max-width: 1100px) {
@@ -1968,6 +2116,17 @@ h3 {
     min-height: 620px;
   }
 }
+@media (max-width: 900px) {
+  .analysis-steps--six {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .analysis-steps--six li:nth-child(3) {
+    border-right: 0;
+  }
+  .analysis-steps--six li:nth-child(-n + 3) {
+    border-bottom: 1px solid var(--fog-200);
+  }
+}
 @media (max-width: 720px) {
   .settings-heading {
     align-items: stretch;
@@ -2005,6 +2164,12 @@ h3 {
   }
   .analysis-steps {
     grid-template-columns: 1fr;
+  }
+  .analysis-steps--six {
+    grid-template-columns: 1fr;
+  }
+  .analysis-steps--six li:nth-child(3) {
+    border-right: 0;
   }
   .analysis-steps li {
     min-height: 62px;
