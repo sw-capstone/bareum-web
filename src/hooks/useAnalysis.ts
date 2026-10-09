@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { QueryClient, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { analysisApi, type AnalysisRequest } from '../services/analysisApi';
 import type { IssueStatus } from '../types';
 
@@ -8,8 +8,17 @@ export const analysisKeys = {
   result: (id: string) => [...analysisKeys.all, id, 'result'] as const,
 };
 
+export function removeAnalysisCache(queryClient: QueryClient, analysisId: string) {
+  queryClient.removeQueries({ queryKey: analysisKeys.progress(analysisId), exact: true });
+  queryClient.removeQueries({ queryKey: analysisKeys.result(analysisId), exact: true });
+}
+
 export function useStartAnalysis() {
-  return useMutation({ mutationFn: (input: AnalysisRequest) => analysisApi.start(input) });
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: AnalysisRequest) => analysisApi.start(input),
+    onSuccess: ({ analysisId }) => removeAnalysisCache(queryClient, analysisId),
+  });
 }
 
 export function useAnalysisProgress(id: string) {
@@ -18,10 +27,42 @@ export function useAnalysisProgress(id: string) {
     queryFn: ({ signal }) => analysisApi.getProgress(id, signal),
     enabled: Boolean(id),
     refetchInterval: (query) =>
-      query.state.data?.status === 'completed' || query.state.data?.status === 'failed'
+      ['completed', 'partial_failed', 'failed', 'canceled'].includes(query.state.data?.status ?? '')
         ? false
         : 500,
     retry: 2,
+  });
+}
+
+export function useCancelAnalysis() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => analysisApi.cancel(id),
+    onSuccess: (_, id) => queryClient.invalidateQueries({ queryKey: analysisKeys.progress(id) }),
+  });
+}
+
+export function usePauseAnalysis() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => analysisApi.pause(id),
+    onSuccess: (_, id) => queryClient.invalidateQueries({ queryKey: analysisKeys.progress(id) }),
+  });
+}
+
+export function useResumeAnalysis() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => analysisApi.resume(id),
+    onSuccess: (_, id) => queryClient.invalidateQueries({ queryKey: analysisKeys.progress(id) }),
+  });
+}
+
+export function useRetryAnalysis() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => analysisApi.retry(id),
+    onSuccess: ({ analysisId }) => removeAnalysisCache(queryClient, analysisId),
   });
 }
 

@@ -92,11 +92,24 @@
 {
   "status": "processing",
   "progress": 48,
-  "step": "규정 매칭"
+  "step": "규정",
+  "filename": "갯벌축제_계획_v3.hwpx",
+  "documentType": "계획 보고서",
+  "checks": [
+    { "id": "structure", "label": "구조", "status": "completed" },
+    { "id": "regulation", "label": "규정", "status": "processing" }
+  ]
 }
 ```
 
-`status`는 `queued | processing | completed | failed` 중 하나입니다.
+`status`는 `queued | processing | paused | completed | partial_failed | failed | canceled` 중 하나입니다. `checks`는 서버에서 실제로 접수·완료된 순서대로 전달하며 각 항목의 `status`는 `pending | processing | completed | failed`입니다. 실패 항목에는 `errorCode`, `errorMessage`, `failedAt`을 선택적으로 포함합니다.
+
+### 분석 취소 및 재분석
+
+- `POST /analyses/:id/cancel`: 진행 중인 분석을 취소합니다. 이미 완료된 경우 `ANALYSIS_ALREADY_COMPLETED` 오류를 반환합니다.
+- `POST /analyses/:id/pause`: 취소 확인 중인 분석을 일시 정지합니다.
+- `POST /analyses/:id/resume`: 취소 확인을 닫은 분석을 중단 지점부터 재개합니다.
+- `POST /analyses/:id/retry`: 기존 보고서와 문서 유형으로 분석을 다시 시작하고 `{ "analysisId": "string" }`을 반환합니다.
 
 ### 결과 조회
 

@@ -26,15 +26,20 @@ export function Header({
     login: '로그인',
     settings: '설정',
   }[screen];
+  const showBreadcrumb = screen !== 'upload' && screen !== 'analyzing';
   return (
     <header className="app-header">
       <button className="brand-button" onClick={() => onNavigate('upload')}>
         <Brand />
       </button>
-      <span className="header-divider" />
-      <div className="breadcrumb">
-        AI 공공보고서 검증 <b>›</b> <strong>{label}</strong>
-      </div>
+      {showBreadcrumb && (
+        <>
+          <span className="header-divider" />
+          <div className="breadcrumb">
+            AI 공공보고서 검증 <b>›</b> <strong>{label}</strong>
+          </div>
+        </>
+      )}
       <div className="header-actions">
         {user ? (
           <div className="profile" ref={profileRef}>
