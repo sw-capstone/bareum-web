@@ -563,6 +563,59 @@ svg {
 .uploaded-file p span {
   color: var(--fog-300);
 }
+.uploaded-file small {
+  display: block;
+  margin-top: 4px;
+  color: var(--ink-500);
+  font-size: 12px;
+}
+.file-status.processing {
+  color: var(--high);
+  font-weight: 650;
+}
+.file-status.completed {
+  color: var(--low);
+}
+.spinner {
+  animation: upload-spin 0.9s linear infinite;
+}
+@keyframes upload-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.upload-notice {
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px solid var(--fog-300);
+  border-radius: 3px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: var(--white);
+}
+.upload-notice.error {
+  border-color: rgba(214, 69, 69, 0.35);
+  background: var(--high-soft);
+  color: var(--high);
+}
+.upload-notice.warning {
+  border-color: rgba(224, 138, 30, 0.35);
+  background: var(--medium-soft);
+  color: var(--medium);
+}
+.upload-notice > svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+.upload-notice > div {
+  flex: 1;
+}
+.upload-notice p {
+  margin: 3px 0 10px;
+  color: var(--ink-700);
+  font-size: 13px;
+}
 .editor {
   border: 1px solid var(--fog-300);
   border-radius: 3px;
@@ -581,6 +634,10 @@ svg {
   margin-left: auto;
   color: var(--fog-500);
 }
+.editor-toolbar small.limit-reached {
+  color: var(--high);
+  font-weight: 800;
+}
 .editor textarea {
   width: 100%;
   min-height: 264px;
@@ -588,6 +645,13 @@ svg {
   border: 0;
   resize: vertical;
   background: var(--paper);
+}
+.editor-help {
+  padding: 8px 16px;
+  border-top: 1px solid var(--fog-200);
+  background: var(--white);
+  color: var(--fog-500);
+  font-size: 12px;
 }
 .document-config {
   max-width: 320px;
