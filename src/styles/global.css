@@ -850,6 +850,70 @@ svg {
   justify-content: flex-end;
   gap: 9px;
 }
+.finish-analysis-modal {
+  width: min(560px, 100%);
+}
+.finish-analysis-body {
+  padding: 42px 36px 32px;
+  text-align: center;
+}
+.finish-analysis-icon {
+  width: 62px;
+  height: 62px;
+  margin: 0 auto 20px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--navy-50);
+  color: var(--navy-700);
+}
+.finish-analysis-icon.complete {
+  background: var(--teal-50);
+  color: var(--teal-700);
+}
+.finish-analysis-icon svg {
+  width: 28px;
+  height: 28px;
+}
+.finish-analysis-body h2 {
+  font-size: 22px;
+}
+.finish-analysis-body p {
+  margin: 9px auto 24px;
+  max-width: 430px;
+  color: var(--ink-500);
+  line-height: 1.6;
+}
+.finish-progress {
+  height: 10px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: var(--fog-200);
+}
+.finish-progress i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--navy-700);
+  transition: width 0.15s ease;
+}
+.finish-analysis-body > strong {
+  display: block;
+  margin-top: 10px;
+  color: var(--navy-700);
+  font-size: 14px;
+}
+.leave-result-modal {
+  width: min(560px, 100%);
+}
+.leave-result-note {
+  margin: 22px 28px;
+  padding: 16px 18px;
+  border-radius: 10px;
+  background: var(--navy-50);
+  color: var(--ink-700);
+  line-height: 1.65;
+}
 .analysis-page {
   max-width: 820px;
   margin: 0 auto;

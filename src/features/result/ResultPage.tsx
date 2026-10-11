@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   BookOpen,
   ChevronDown,
@@ -29,15 +29,20 @@ export function ResultPage({
   result,
   analysisId,
   onExport,
+  onFinish,
 }: {
   result: AnalysisResult;
   analysisId: string;
   onExport: () => void;
+  onFinish: () => void;
 }) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [section, setSection] = useState(result.sections[0]?.id ?? '');
   const [zoom, setZoom] = useState(100);
   const [fullscreen, setFullscreen] = useState(false);
+  const [finishOpen, setFinishOpen] = useState(false);
+  const [finishProgress, setFinishProgress] = useState(0);
+  const [finishComplete, setFinishComplete] = useState(false);
   const workspace = useIssueWorkspace(result.issues);
   const filters = useIssueFilters(workspace.issues);
   const active = workspace.issues.find((issue) => issue.id === activeId) ?? null;
@@ -54,6 +59,20 @@ export function ResultPage({
       ),
     [workspace.issues],
   );
+
+  useEffect(() => {
+    if (!finishOpen || finishComplete) return;
+    const timer = window.setInterval(() => {
+      setFinishProgress((current) => {
+        if (current < 90) return current + 10;
+        window.clearInterval(timer);
+        setFinishComplete(true);
+        onFinish();
+        return 100;
+      });
+    }, 100);
+    return () => window.clearInterval(timer);
+  }, [finishComplete, finishOpen, onFinish]);
 
   function selectIssue(issue: Issue) {
     setActiveId(issue.id);
@@ -80,8 +99,11 @@ export function ResultPage({
           <Button
             size="sm"
             variant="secondary"
-            disabled
-            title="최종 결과 리포트 생성은 이슈 #23에서 연결합니다."
+            onClick={() => {
+              setFinishProgress(0);
+              setFinishComplete(false);
+              setFinishOpen(true);
+            }}
           >
             <FileCheck2 />
             수정 끝내기
@@ -246,6 +268,38 @@ export function ResultPage({
           onClose={() => setActiveId(null)}
           onSaved={(patch) => workspace.updateIssue(active.id, patch)}
         />
+      )}
+      {finishOpen && (
+        <Modal
+          label="분석 완료"
+          className="finish-analysis-modal"
+          onClose={() => {
+            if (finishComplete) setFinishOpen(false);
+          }}
+        >
+          <div className="finish-analysis-body">
+            <span className={`finish-analysis-icon ${finishComplete ? 'complete' : ''}`}>
+              <FileCheck2 />
+            </span>
+            <h2>
+              {finishComplete ? '분석이 완료되었습니다' : '최종 분석 리포트를 생성하고 있습니다'}
+            </h2>
+            <p>
+              {finishComplete
+                ? '분석 기록이 저장되었습니다. 내 분석 기록에서 언제든 다시 확인할 수 있습니다.'
+                : '현재까지 반영된 수정사항을 바탕으로 결과를 정리하고 있습니다.'}
+            </p>
+            <div className="finish-progress" aria-label="리포트 생성 진행률">
+              <i style={{ width: `${finishProgress}%` }} />
+            </div>
+            <strong>{finishProgress}%</strong>
+          </div>
+          {finishComplete && (
+            <div className="modal-actions">
+              <Button onClick={() => setFinishOpen(false)}>완료</Button>
+            </div>
+          )}
+        </Modal>
       )}
       {fullscreen && (
         <Modal
