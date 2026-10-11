@@ -315,30 +315,84 @@ svg {
   position: absolute;
   top: 46px;
   right: 0;
-  width: 150px;
-  padding: 6px;
+  width: 310px;
+  padding: 0;
   border: 1px solid var(--fog-200);
-  border-radius: 8px;
+  border-radius: 12px;
   background: #fff;
   box-shadow: var(--shadow-md);
+  overflow: hidden;
+  z-index: 50;
 }
 .profile-menu button {
   width: 100%;
-  height: 38px;
-  padding: 0 10px;
+  min-height: 42px;
+  padding: 0 14px;
   border: 0;
   border-radius: 6px;
   background: transparent;
   display: flex;
   align-items: center;
   gap: 9px;
-  font-size: 13px;
+  font-size: 14px;
+  color: var(--ink-800);
   cursor: pointer;
+}
+.profile-menu button svg {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
 }
 .profile-menu button:hover {
   background: var(--fog-100);
 }
-.profile-menu button:last-child {
+.profile-menu button:disabled {
+  color: var(--ink-300);
+  cursor: not-allowed;
+}
+.profile-menu button:disabled:hover {
+  background: transparent;
+}
+.profile-menu-user {
+  padding: 20px 20px 14px;
+}
+.profile-menu-user > strong,
+.profile-menu-user > span {
+  display: block;
+}
+.profile-menu-user > strong {
+  color: var(--ink-900);
+  font-size: 16px;
+}
+.profile-menu-user > span {
+  margin-top: 3px;
+  color: var(--ink-500);
+  font-size: 13px;
+}
+.profile-menu-shortcuts {
+  display: grid;
+  grid-template-columns: 1fr 1.35fr;
+  gap: 8px;
+  margin-top: 15px;
+}
+.profile-menu-shortcuts button {
+  min-height: 36px;
+  justify-content: center;
+  padding: 0 8px;
+  border: 1px solid var(--fog-300);
+  border-radius: 7px;
+  font-size: 12px;
+}
+.profile-menu-shortcuts button:hover {
+  border-color: var(--navy-300);
+  color: var(--navy-700);
+}
+.profile-menu-section,
+.profile-menu-footer {
+  padding: 8px;
+  border-top: 1px solid var(--fog-200);
+}
+.profile-menu-footer button {
   color: var(--high);
 }
 .user-chip > span {
@@ -350,6 +404,77 @@ svg {
   background: var(--navy-700);
   color: #fff;
   font-weight: 700;
+}
+.account-page {
+  max-width: 1040px;
+}
+.account-card {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 18px;
+  padding: 28px;
+}
+.account-card h2,
+.account-card p {
+  margin: 0;
+}
+.account-card p {
+  margin-top: 6px;
+  color: var(--ink-500);
+}
+.account-provider-icon,
+.history-item-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: var(--navy-50);
+  color: var(--navy-700);
+}
+.history-card {
+  padding: 12px;
+}
+.history-item {
+  width: 100%;
+  padding: 16px;
+  border: 0;
+  border-radius: 10px;
+  background: #fff;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 16px;
+  text-align: left;
+  cursor: pointer;
+}
+.history-item:hover {
+  background: var(--fog-100);
+}
+.history-item strong,
+.history-item small {
+  display: block;
+}
+.history-item small {
+  margin-top: 5px;
+  color: var(--ink-500);
+}
+.history-item > b {
+  color: var(--navy-700);
+  font-size: 13px;
+}
+.history-empty {
+  padding: 56px 24px;
+  text-align: center;
+  color: var(--ink-500);
+}
+.history-empty > svg {
+  width: 34px;
+  height: 34px;
+}
+.history-empty h2 {
+  color: var(--ink-900);
 }
 .login-page {
   min-height: 100vh;

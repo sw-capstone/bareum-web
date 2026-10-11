@@ -1,5 +1,13 @@
 export type Screen =
-  'login' | 'upload' | 'analyzing' | 'failed' | 'dashboard' | 'report' | 'settings';
+  | 'login'
+  | 'upload'
+  | 'analyzing'
+  | 'failed'
+  | 'dashboard'
+  | 'report'
+  | 'settings'
+  | 'loginManagement'
+  | 'history';
 export type Severity = 'high' | 'medium' | 'low' | 'pending';
 export type IssueStatus = 'open' | 'resolved' | 'ignored';
 export interface User {
