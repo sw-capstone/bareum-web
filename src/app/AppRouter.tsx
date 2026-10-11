@@ -33,11 +33,20 @@ import { ResultPage } from '../features/result/ResultPage';
 import { ReportPage } from '../features/report/ReportPage';
 import { ExportDialog } from '../features/export/ExportDialog';
 import { SettingsPage } from '../features/settings/SettingsPage';
+import { AnalysisHistoryPage, LoginManagementPage } from '../features/account/AccountPages';
+import {
+  getRecentAnalysis,
+  RECENT_ANALYSIS_EVENT,
+  setRecentAnalysis,
+  type RecentAnalysis,
+} from '../features/account/recentAnalysis';
 import type { ExportKind } from '../services/exportApi';
 import { authApi } from '../services/authApi';
 import { ApiError } from '../services/httpClient';
 
 function screenFor(pathname: string): Screen {
+  if (pathname === '/history') return 'history';
+  if (pathname === '/settings/login-management') return 'loginManagement';
   if (pathname.startsWith('/settings')) return 'settings';
   if (pathname.startsWith('/analyses/') && pathname.endsWith('/report')) return 'report';
   if (pathname.startsWith('/analyses/') && pathname.endsWith('/result')) return 'dashboard';
@@ -51,6 +60,14 @@ function AppShell() {
   const location = useLocation();
   const [exportOpen, setExportOpen] = useState(false);
   const [exportKind, setExportKind] = useState<ExportKind>('document');
+  const [recentAnalysis, setRecentAnalysisState] = useState<RecentAnalysis | null>(() =>
+    getRecentAnalysis(),
+  );
+  useEffect(() => {
+    const update = () => setRecentAnalysisState(getRecentAnalysis());
+    window.addEventListener(RECENT_ANALYSIS_EVENT, update);
+    return () => window.removeEventListener(RECENT_ANALYSIS_EVENT, update);
+  }, []);
   const screen = screenFor(location.pathname);
   const id = location.pathname.split('/')[2] || 'analysis-demo';
   const exportResult = useAnalysisResult(screen === 'dashboard' || screen === 'report' ? id : '');
@@ -63,9 +80,27 @@ function AppShell() {
       <Header
         user={user}
         screen={screen}
+        hasActiveAnalysis={recentAnalysis?.status === 'analyzing'}
+        hasRecentResult={recentAnalysis?.status === 'result'}
         onNavigate={(s) => {
           if (s === 'settings') {
             navigate('/settings', { state: { from: location.pathname } });
+            return;
+          }
+          if (s === 'loginManagement') {
+            navigate('/settings/login-management', { state: { from: location.pathname } });
+            return;
+          }
+          if (s === 'history') {
+            navigate('/history');
+            return;
+          }
+          if (s === 'analyzing' && recentAnalysis?.status === 'analyzing') {
+            navigate(`/analyses/${recentAnalysis.id}`);
+            return;
+          }
+          if (s === 'dashboard' && recentAnalysis?.status === 'result') {
+            navigate(`/analyses/${recentAnalysis.id}/result`);
             return;
           }
           navigate(s === 'upload' ? '/upload' : '/');
@@ -122,7 +157,10 @@ function UploadRoute() {
         analysisError={start.isError}
         onAnalyze={(request) =>
           start.mutate(request, {
-            onSuccess: ({ analysisId }) => navigate(`/analyses/${analysisId}`),
+            onSuccess: ({ analysisId }) => {
+              setRecentAnalysis({ id: analysisId, status: 'analyzing' });
+              navigate(`/analyses/${analysisId}`);
+            },
           })
         }
       />
@@ -208,11 +246,37 @@ function SettingsRoute() {
 
   return <SettingsPage onBack={() => navigate(destination, { replace: true })} />;
 }
+function LoginManagementRoute() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const from = (location.state as { from?: string } | null)?.from;
+  const destination = from && !from.startsWith('/settings') ? from : '/upload';
+  return <LoginManagementPage onBack={() => navigate(destination, { replace: true })} />;
+}
+function HistoryRoute() {
+  const navigate = useNavigate();
+  const recent = getRecentAnalysis();
+  return (
+    <AnalysisHistoryPage
+      recent={recent}
+      onOpen={(analysis) =>
+        navigate(
+          analysis.status === 'result'
+            ? `/analyses/${analysis.id}/result`
+            : `/analyses/${analysis.id}`,
+        )
+      }
+    />
+  );
+}
 function ResultRoute() {
   const { id = '' } = useParams();
   const navigate = useNavigate();
   const { openExport } = useOutletContext<{ openExport: (kind: ExportKind) => void }>();
   const query = useAnalysisResult(id);
+  useEffect(() => {
+    setRecentAnalysis({ id, status: 'result' });
+  }, [id]);
   if (query.isLoading) return <PageLoading label="분석 결과를 불러오고 있습니다" />;
   if (query.isError || !query.data) return <PageError onRetry={() => query.refetch()} />;
   return (
@@ -251,6 +315,8 @@ export function AppRouter() {
       <Route element={<RequireSession />}>
         <Route path="/upload" element={<UploadRoute />} />
         <Route path="/settings" element={<SettingsRoute />} />
+        <Route path="/settings/login-management" element={<LoginManagementRoute />} />
+        <Route path="/history" element={<HistoryRoute />} />
         <Route path="/analyses/:id" element={<AnalysisRoute />} />
         <Route path="/analyses/:id/failed" element={<FailureRoute />} />
         <Route path="/analyses/:id/result" element={<ResultRoute />} />
