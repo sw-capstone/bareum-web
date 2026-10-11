@@ -19,6 +19,7 @@ function renderResult(analysisId = sampleResult.id) {
       result={{ ...sampleResult, id: analysisId }}
       analysisId={analysisId}
       onExport={vi.fn()}
+      onFinish={vi.fn()}
     />,
   );
 }
@@ -53,6 +54,7 @@ describe('ResultPage document view', () => {
         result={{ ...sampleResult, id: 'analysis-2' }}
         analysisId="analysis-2"
         onExport={vi.fn()}
+        onFinish={vi.fn()}
       />,
     );
 
@@ -167,5 +169,15 @@ describe('ResultPage document view', () => {
     expect(screen.getByRole('textbox', { name: '최종 적용 문장' })).toBeEnabled();
     expect(screen.getByRole('button', { name: '다른 수정안 받기' })).toBeEnabled();
     expect(screen.getByRole('button', { name: '수정안 적용' })).toBeEnabled();
+  });
+
+  it('수정 끝내기를 누르면 최종 리포트 생성 진행 상태를 표시한다', async () => {
+    renderResult();
+
+    await userEvent.click(screen.getByRole('button', { name: /수정 끝내기/ }));
+
+    expect(screen.getByRole('dialog', { name: '분석 완료' })).toBeVisible();
+    expect(screen.getByText('최종 분석 리포트를 생성하고 있습니다')).toBeVisible();
+    expect(screen.getByLabelText('리포트 생성 진행률')).toBeVisible();
   });
 });

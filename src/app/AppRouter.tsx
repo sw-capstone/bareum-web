@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   Navigate,
   Outlet,
@@ -10,6 +10,7 @@ import {
   useParams,
 } from 'react-router-dom';
 import { Header } from '../components/Header';
+import { Button, Modal } from '../components/ui';
 import { PageError, PageLoading } from '../components/AsyncState';
 import { useSession } from '../contexts/session';
 import {
@@ -35,6 +36,8 @@ import { SettingsPage } from '../features/settings/SettingsPage';
 import { AnalysisHistoryPage, LoginManagementPage } from '../features/account/AccountPages';
 import {
   getRecentAnalysis,
+  getAnalysisRecords,
+  completeAnalysis,
   RECENT_ANALYSIS_EVENT,
   setRecentAnalysis,
   type RecentAnalysis,
@@ -61,6 +64,7 @@ function AppShell() {
   const [recentAnalysis, setRecentAnalysisState] = useState<RecentAnalysis | null>(() =>
     getRecentAnalysis(),
   );
+  const [pendingNavigation, setPendingNavigation] = useState<Screen | null>(null);
   useEffect(() => {
     const update = () => setRecentAnalysisState(getRecentAnalysis());
     window.addEventListener(RECENT_ANALYSIS_EVENT, update);
@@ -68,10 +72,46 @@ function AppShell() {
   }, []);
   const screen = screenFor(location.pathname);
   const id = location.pathname.split('/')[2] || 'analysis-demo';
+  const isUnfinishedResult =
+    screen === 'dashboard' && recentAnalysis?.id === id && recentAnalysis.status === 'result';
+  useEffect(() => {
+    if (!isUnfinishedResult) return;
+    const warn = (event: BeforeUnloadEvent) => event.preventDefault();
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [isUnfinishedResult]);
   const exportResult = useAnalysisResult(screen === 'dashboard' ? id : '');
   const openExport = (kind: ExportKind) => {
     setExportKind(kind);
     setExportOpen(true);
+  };
+  const markRecentResult = useCallback((analysisId: string) => {
+    const next = { id: analysisId, status: 'result' as const };
+    setRecentAnalysis(next);
+    setRecentAnalysisState(getRecentAnalysis());
+  }, []);
+  const moveTo = (destination: Screen) => {
+    if (destination === 'settings') {
+      navigate('/settings', { state: { from: location.pathname } });
+      return;
+    }
+    if (destination === 'loginManagement') {
+      navigate('/settings/login-management', { state: { from: location.pathname } });
+      return;
+    }
+    if (destination === 'history') {
+      navigate('/history');
+      return;
+    }
+    if (destination === 'analyzing' && recentAnalysis?.status === 'analyzing') {
+      navigate(`/analyses/${recentAnalysis.id}`);
+      return;
+    }
+    if (destination === 'dashboard' && recentAnalysis?.status === 'result') {
+      navigate(`/analyses/${recentAnalysis.id}/result`);
+      return;
+    }
+    navigate(destination === 'upload' ? '/upload' : '/');
   };
   return (
     <>
@@ -81,27 +121,8 @@ function AppShell() {
         hasActiveAnalysis={recentAnalysis?.status === 'analyzing'}
         hasRecentResult={recentAnalysis?.status === 'result'}
         onNavigate={(s) => {
-          if (s === 'settings') {
-            navigate('/settings', { state: { from: location.pathname } });
-            return;
-          }
-          if (s === 'loginManagement') {
-            navigate('/settings/login-management', { state: { from: location.pathname } });
-            return;
-          }
-          if (s === 'history') {
-            navigate('/history');
-            return;
-          }
-          if (s === 'analyzing' && recentAnalysis?.status === 'analyzing') {
-            navigate(`/analyses/${recentAnalysis.id}`);
-            return;
-          }
-          if (s === 'dashboard' && recentAnalysis?.status === 'result') {
-            navigate(`/analyses/${recentAnalysis.id}/result`);
-            return;
-          }
-          navigate(s === 'upload' ? '/upload' : '/');
+          if (isUnfinishedResult && s !== 'dashboard') setPendingNavigation(s);
+          else moveTo(s);
         }}
         onLogout={async () => {
           try {
@@ -112,13 +133,46 @@ function AppShell() {
           }
         }}
       />
-      <Outlet context={{ openExport }} />
+      <Outlet context={{ openExport, markRecentResult }} />
       {exportOpen && exportResult.data && (
         <ExportDialog
           result={exportResult.data}
           initialKind={exportKind}
           onClose={() => setExportOpen(false)}
         />
+      )}
+      {pendingNavigation && (
+        <Modal
+          label="분석 결과 화면 나가기"
+          className="leave-result-modal"
+          onClose={() => setPendingNavigation(null)}
+        >
+          <div className="modal-head">
+            <div>
+              <h2>분석을 아직 완료하지 않았습니다</h2>
+              <p>수정 끝내기 전에는 분석 기록에 저장되지 않습니다.</p>
+            </div>
+          </div>
+          <div className="leave-result-note">
+            현재 분석 결과는 임시로 보관됩니다. 계정 메뉴의 분석 결과보기를 통해 돌아와 작업을
+            계속할 수 있습니다.
+          </div>
+          <div className="modal-actions">
+            <Button variant="secondary" onClick={() => setPendingNavigation(null)}>
+              분석 결과로 돌아가기
+            </Button>
+            <Button
+              variant="tertiary"
+              onClick={() => {
+                const destination = pendingNavigation;
+                setPendingNavigation(null);
+                moveTo(destination);
+              }}
+            >
+              완료하지 않고 나가기
+            </Button>
+          </div>
+        </Modal>
       )}
     </>
   );
@@ -253,27 +307,24 @@ function LoginManagementRoute() {
 }
 function HistoryRoute() {
   const navigate = useNavigate();
-  const recent = getRecentAnalysis();
+  const records = getAnalysisRecords();
   return (
     <AnalysisHistoryPage
-      recent={recent}
-      onOpen={(analysis) =>
-        navigate(
-          analysis.status === 'result'
-            ? `/analyses/${analysis.id}/result`
-            : `/analyses/${analysis.id}`,
-        )
-      }
+      records={records}
+      onOpen={(analysis) => navigate(`/analyses/${analysis.id}/result`)}
     />
   );
 }
 function ResultRoute() {
   const { id = '' } = useParams();
-  const { openExport } = useOutletContext<{ openExport: (kind: ExportKind) => void }>();
+  const { openExport, markRecentResult } = useOutletContext<{
+    openExport: (kind: ExportKind) => void;
+    markRecentResult: (analysisId: string) => void;
+  }>();
   const query = useAnalysisResult(id);
   useEffect(() => {
-    setRecentAnalysis({ id, status: 'result' });
-  }, [id]);
+    markRecentResult(id);
+  }, [id, markRecentResult]);
   if (query.isLoading) return <PageLoading label="분석 결과를 불러오고 있습니다" />;
   if (query.isError || !query.data) return <PageError onRetry={() => query.refetch()} />;
   return (
@@ -282,6 +333,14 @@ function ResultRoute() {
       result={query.data}
       analysisId={id}
       onExport={() => openExport('document')}
+      onFinish={() =>
+        completeAnalysis({
+          id,
+          title: query.data.title,
+          filename: query.data.filename,
+          completedAt: new Date().toISOString(),
+        })
+      }
     />
   );
 }

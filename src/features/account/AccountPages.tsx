@@ -1,6 +1,6 @@
 import { CheckCircle2, Clock3, ExternalLink, ShieldCheck } from 'lucide-react';
 import { Button } from '../../components/ui';
-import type { RecentAnalysis } from './recentAnalysis';
+import type { AnalysisRecord } from './recentAnalysis';
 
 export function LoginManagementPage({ onBack }: { onBack: () => void }) {
   return (
@@ -29,11 +29,11 @@ export function LoginManagementPage({ onBack }: { onBack: () => void }) {
 }
 
 export function AnalysisHistoryPage({
-  recent,
+  records,
   onOpen,
 }: {
-  recent: RecentAnalysis | null;
-  onOpen: (recent: RecentAnalysis) => void;
+  records: AnalysisRecord[];
+  onOpen: (record: AnalysisRecord) => void;
 }) {
   return (
     <main className="page account-page">
@@ -42,19 +42,21 @@ export function AnalysisHistoryPage({
         <p>최근 진행한 문서 분석을 확인합니다.</p>
       </div>
       <section className="upload-card history-card">
-        {recent ? (
-          <button className="history-item" onClick={() => onOpen(recent)}>
-            <span className="history-item-icon">
-              {recent.status === 'result' ? <CheckCircle2 /> : <Clock3 />}
-            </span>
-            <span>
-              <strong>최근 분석</strong>
-              <small>
-                {recent.status === 'result' ? '분석 완료 · 결과 확인 가능' : '분석 진행 중'}
-              </small>
-            </span>
-            <b>{recent.status === 'result' ? '결과 보기' : '진행 상황 보기'}</b>
-          </button>
+        {records.length ? (
+          records.map((record) => (
+            <button className="history-item" key={record.id} onClick={() => onOpen(record)}>
+              <span className="history-item-icon">
+                <CheckCircle2 />
+              </span>
+              <span>
+                <strong>{record.title}</strong>
+                <small>
+                  {record.filename} · {new Date(record.completedAt).toLocaleDateString('ko-KR')}
+                </small>
+              </span>
+              <b>결과 보기</b>
+            </button>
+          ))
         ) : (
           <div className="history-empty">
             <Clock3 />
