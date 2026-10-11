@@ -1006,6 +1006,11 @@ svg {
   font-size: 26px;
   margin-top: 3px;
 }
+.result-title > div:first-child > p {
+  margin-top: 5px;
+  color: var(--ink-500);
+  font-size: 13px;
+}
 .result-title-actions {
   display: flex;
   align-items: center;
@@ -1222,6 +1227,15 @@ svg {
   background: rgba(46, 158, 90, 0.2);
   border-bottom: 2px solid var(--low);
 }
+.paper mark.resolved {
+  background: rgba(15, 126, 140, 0.13);
+  border-bottom-color: var(--teal-700);
+}
+.paper mark.ignored {
+  background: var(--fog-100);
+  border-bottom-color: var(--fog-500);
+  opacity: 0.72;
+}
 .legend {
   height: 42px;
   display: flex;
@@ -1318,6 +1332,14 @@ svg {
   border-color: var(--teal-700);
   color: #fff;
 }
+.issue-card.ignored {
+  background: var(--fog-50);
+  border-style: dashed;
+}
+.issue-card.ignored small {
+  background: var(--fog-700);
+  color: #fff;
+}
 .issue-card > div {
   display: flex;
   align-items: center;
@@ -1412,6 +1434,17 @@ svg {
   font-size: 19px;
   flex: 1;
 }
+.issue-modal-head > div {
+  flex: 1;
+}
+.issue-modal-head > div h2 {
+  font-size: 19px;
+}
+.issue-modal-head > div p {
+  margin-top: 3px;
+  color: var(--ink-500);
+  font-size: 11px;
+}
 .issue-modal-head > button,
 .export-head > button {
   border: 0;
@@ -1424,6 +1457,85 @@ svg {
   padding: 22px 24px;
   display: grid;
   gap: 22px;
+}
+.issue-detail-modal {
+  width: min(760px, 100%);
+}
+.issue-detail-modal textarea {
+  width: 100%;
+  min-height: 90px;
+  padding: 13px 15px;
+  resize: vertical;
+  border: 1px solid var(--fog-300);
+  border-radius: 8px;
+  font: inherit;
+  line-height: 1.6;
+}
+.issue-detail-modal .modal-section h3 {
+  margin-bottom: 10px;
+  color: var(--ink-700);
+  font-size: 15px;
+  font-weight: 700;
+}
+.issue-detail-modal textarea:disabled {
+  background: var(--fog-100);
+  color: var(--fog-500);
+  cursor: not-allowed;
+}
+.field-help {
+  margin-top: 7px;
+  color: var(--fog-500);
+  font-size: 11px;
+}
+.verification-list {
+  padding: 13px 16px 13px 34px;
+  border: 1px solid var(--fog-200);
+  border-radius: 8px;
+  background: var(--fog-50);
+  font-size: 13px;
+  line-height: 1.7;
+}
+.suggestion-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.suggestion-toolbar > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--ink-500);
+  font-size: 11px;
+}
+.suggestion-toolbar > span svg {
+  width: 13px;
+}
+.suggestion-toolbar > .button:first-of-type {
+  margin-left: auto;
+}
+.suggestion-preview {
+  padding: 12px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.65;
+  background: var(--teal-50);
+  border: 1px solid var(--teal-500);
+}
+.inline-error {
+  padding: 11px 13px;
+  border-radius: 7px;
+  background: var(--high-soft);
+  color: var(--high);
+  font-size: 12px;
+}
+.split-actions {
+  justify-content: space-between;
+}
+.split-actions > div {
+  display: flex;
+  gap: 8px;
 }
 .modal-section h3 {
   font-size: 12px;
@@ -1467,6 +1579,19 @@ svg {
 }
 .evidence strong {
   font-size: 12px;
+}
+.evidence div > span {
+  display: inline-block;
+  margin-right: 7px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--navy-100);
+  color: var(--navy-700);
+  font-size: 9px;
+  font-weight: 700;
+}
+.evidence a {
+  color: var(--navy-700);
 }
 .evidence p {
   font-size: 11px;

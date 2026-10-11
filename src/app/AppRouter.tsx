@@ -30,7 +30,6 @@ import { useSignupFlow } from '../features/auth/signupFlow';
 import { UploadPage } from '../features/upload/UploadPage';
 import { AnalysisPage, FailedPage } from '../features/analysis/AnalysisPage';
 import { ResultPage } from '../features/result/ResultPage';
-import { ReportPage } from '../features/report/ReportPage';
 import { ExportDialog } from '../features/export/ExportDialog';
 import { SettingsPage } from '../features/settings/SettingsPage';
 import { AnalysisHistoryPage, LoginManagementPage } from '../features/account/AccountPages';
@@ -48,7 +47,6 @@ function screenFor(pathname: string): Screen {
   if (pathname === '/history') return 'history';
   if (pathname === '/settings/login-management') return 'loginManagement';
   if (pathname.startsWith('/settings')) return 'settings';
-  if (pathname.startsWith('/analyses/') && pathname.endsWith('/report')) return 'report';
   if (pathname.startsWith('/analyses/') && pathname.endsWith('/result')) return 'dashboard';
   if (pathname.startsWith('/analyses/') && pathname.endsWith('/failed')) return 'failed';
   if (pathname.startsWith('/analyses/')) return 'analyzing';
@@ -70,7 +68,7 @@ function AppShell() {
   }, []);
   const screen = screenFor(location.pathname);
   const id = location.pathname.split('/')[2] || 'analysis-demo';
-  const exportResult = useAnalysisResult(screen === 'dashboard' || screen === 'report' ? id : '');
+  const exportResult = useAnalysisResult(screen === 'dashboard' ? id : '');
   const openExport = (kind: ExportKind) => {
     setExportKind(kind);
     setExportOpen(true);
@@ -271,7 +269,6 @@ function HistoryRoute() {
 }
 function ResultRoute() {
   const { id = '' } = useParams();
-  const navigate = useNavigate();
   const { openExport } = useOutletContext<{ openExport: (kind: ExportKind) => void }>();
   const query = useAnalysisResult(id);
   useEffect(() => {
@@ -284,23 +281,7 @@ function ResultRoute() {
       key={id}
       result={query.data}
       analysisId={id}
-      onReport={() => navigate(`/analyses/${id}/report`)}
       onExport={() => openExport('document')}
-    />
-  );
-}
-function ReportRoute() {
-  const { id = '' } = useParams();
-  const navigate = useNavigate();
-  const { openExport } = useOutletContext<{ openExport: (kind: ExportKind) => void }>();
-  const query = useAnalysisResult(id);
-  if (query.isLoading) return <PageLoading />;
-  if (query.isError || !query.data) return <PageError onRetry={() => query.refetch()} />;
-  return (
-    <ReportPage
-      result={query.data}
-      onBack={() => navigate(`/analyses/${id}/result`)}
-      onExport={() => openExport('report')}
     />
   );
 }
@@ -320,7 +301,6 @@ export function AppRouter() {
         <Route path="/analyses/:id" element={<AnalysisRoute />} />
         <Route path="/analyses/:id/failed" element={<FailureRoute />} />
         <Route path="/analyses/:id/result" element={<ResultRoute />} />
-        <Route path="/analyses/:id/report" element={<ReportRoute />} />
       </Route>
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>

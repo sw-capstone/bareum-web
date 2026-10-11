@@ -41,7 +41,6 @@ export function Header({
     analyzing: '분석 중',
     failed: '분석 실패',
     dashboard: '분석 결과',
-    report: '품질 리포트',
     login: '로그인',
     settings: '설정',
     loginManagement: '로그인 관리',

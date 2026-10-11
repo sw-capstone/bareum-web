@@ -1,6 +1,6 @@
 import { QueryClient, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { analysisApi, type AnalysisRequest } from '../services/analysisApi';
-import type { IssueStatus } from '../types';
+import type { Issue } from '../types';
 
 export const analysisKeys = {
   all: ['analyses'] as const,
@@ -76,12 +76,14 @@ export function useAnalysisResult(id: string) {
 }
 
 export function useSaveIssueChanges(analysisId: string) {
-  const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (changes: Array<{ issueId: string; status: IssueStatus }>) =>
-      Promise.all(
-        changes.map((change) => analysisApi.updateIssue(analysisId, change.issueId, change.status)),
-      ),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: analysisKeys.result(analysisId) }),
+    mutationFn: ({ issueId, patch }: { issueId: string; patch: Partial<Issue> }) =>
+      analysisApi.updateIssue(analysisId, issueId, patch),
+  });
+}
+
+export function useRegenerateSuggestion(analysisId: string) {
+  return useMutation({
+    mutationFn: (issueId: string) => analysisApi.regenerateSuggestion(analysisId, issueId),
   });
 }
