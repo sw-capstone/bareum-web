@@ -11,7 +11,14 @@ export const verifyEmailResponseSchema = z.object({
   verificationToken: z.string().min(1),
 });
 
-const evidenceSchema = z.object({ source: z.string(), quote: z.string() });
+const evidenceSchema = z.object({
+  source: z.string(),
+  quote: z.string(),
+  type: z
+    .enum(['법령', '자치법규', '행정규칙', '지침', '상위계획', '정책', '공문', '방침', '기타'])
+    .optional(),
+  url: z.string().url().optional(),
+});
 const segmentSchema = z.object({
   text: z.string(),
   issueId: z.string().optional(),
@@ -21,13 +28,21 @@ const issueSchema = z.object({
   id: z.string(),
   level: severitySchema,
   status: issueStatusSchema,
-  sectionId: z.string(),
+  sectionId: z.string().optional(),
   section: z.string(),
+  location: z.string().optional(),
+  locationOrder: z.number().optional(),
+  checkArea: z.string().optional(),
   title: z.string(),
   summary: z.string(),
   original: z.string(),
   suggestion: z.string(),
+  appliedText: z.string().nullable().optional(),
+  suggestionAvailable: z.boolean().optional(),
+  canRegenerate: z.boolean().optional(),
   explanation: z.string(),
+  pendingReason: z.string().optional(),
+  userChecks: z.array(z.string()).optional(),
   evidence: z.array(evidenceSchema),
 });
 
