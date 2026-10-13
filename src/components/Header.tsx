@@ -16,7 +16,6 @@ import { Brand, Button } from './ui';
 import { useOutsideClick } from '../hooks/useOutsideClick';
 export function Header({
   user,
-  screen,
   onNavigate,
   onLogout,
   hasActiveAnalysis = false,
@@ -36,30 +35,11 @@ export function Header({
     setMenuOpen(false);
     onNavigate(destination);
   };
-  const label = {
-    upload: '새 문서',
-    analyzing: '분석 중',
-    failed: '분석 실패',
-    dashboard: '분석 결과',
-    login: '로그인',
-    settings: '설정',
-    loginManagement: '로그인 관리',
-    history: '내 분석 기록',
-  }[screen];
-  const showBreadcrumb = screen !== 'upload' && screen !== 'analyzing';
   return (
     <header className="app-header">
       <button className="brand-button" onClick={() => onNavigate('upload')}>
         <Brand />
       </button>
-      {showBreadcrumb && (
-        <>
-          <span className="header-divider" />
-          <div className="breadcrumb">
-            AI 공공보고서 검증 <b>›</b> <strong>{label}</strong>
-          </div>
-        </>
-      )}
       <div className="header-actions">
         {user ? (
           <div className="profile" ref={profileRef}>

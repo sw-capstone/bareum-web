@@ -33,11 +33,19 @@ import { AnalysisPage, FailedPage } from '../features/analysis/AnalysisPage';
 import { ResultPage } from '../features/result/ResultPage';
 import { ExportDialog } from '../features/export/ExportDialog';
 import { SettingsPage } from '../features/settings/SettingsPage';
-import { AnalysisHistoryPage, LoginManagementPage } from '../features/account/AccountPages';
+import {
+  AnalysisHistoryPage,
+  LoginManagementPage,
+  ReportAnalysisHistoryPage,
+} from '../features/account/AccountPages';
 import {
   getRecentAnalysis,
   getAnalysisRecords,
   completeAnalysis,
+  deleteAnalysisRecord,
+  deleteAnalysisReport,
+  ensureAnalysisHistoryDemo,
+  groupAnalysisRecords,
   RECENT_ANALYSIS_EVENT,
   setRecentAnalysis,
   type RecentAnalysis,
@@ -47,7 +55,7 @@ import { authApi } from '../services/authApi';
 import { ApiError } from '../services/httpClient';
 
 function screenFor(pathname: string): Screen {
-  if (pathname === '/history') return 'history';
+  if (pathname.startsWith('/history')) return 'history';
   if (pathname === '/settings/login-management') return 'loginManagement';
   if (pathname.startsWith('/settings')) return 'settings';
   if (pathname.startsWith('/analyses/') && pathname.endsWith('/result')) return 'dashboard';
@@ -307,11 +315,36 @@ function LoginManagementRoute() {
 }
 function HistoryRoute() {
   const navigate = useNavigate();
-  const records = getAnalysisRecords();
+  const [records, setRecords] = useState(() => {
+    ensureAnalysisHistoryDemo();
+    return getAnalysisRecords();
+  });
+  const folders = groupAnalysisRecords(records);
   return (
     <AnalysisHistoryPage
-      records={records}
-      onOpen={(analysis) => navigate(`/analyses/${analysis.id}/result`)}
+      folders={folders}
+      onOpen={(folder) => navigate(`/history/${folder.id}`)}
+      onDelete={(folder) => {
+        deleteAnalysisReport(folder.id);
+        setRecords(getAnalysisRecords());
+      }}
+    />
+  );
+}
+function ReportHistoryRoute() {
+  const navigate = useNavigate();
+  const { reportId = '' } = useParams();
+  const [records, setRecords] = useState(() => getAnalysisRecords());
+  const folder = groupAnalysisRecords(records).find((item) => item.id === reportId);
+  if (!folder) return <Navigate to="/history" replace />;
+  return (
+    <ReportAnalysisHistoryPage
+      folder={folder}
+      onBack={() => navigate('/history')}
+      onDelete={(record) => {
+        deleteAnalysisRecord(record.id);
+        setRecords(getAnalysisRecords());
+      }}
     />
   );
 }
@@ -357,6 +390,7 @@ export function AppRouter() {
         <Route path="/settings" element={<SettingsRoute />} />
         <Route path="/settings/login-management" element={<LoginManagementRoute />} />
         <Route path="/history" element={<HistoryRoute />} />
+        <Route path="/history/:reportId" element={<ReportHistoryRoute />} />
         <Route path="/analyses/:id" element={<AnalysisRoute />} />
         <Route path="/analyses/:id/failed" element={<FailureRoute />} />
         <Route path="/analyses/:id/result" element={<ResultRoute />} />
