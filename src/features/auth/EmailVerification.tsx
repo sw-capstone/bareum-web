@@ -6,16 +6,30 @@ import { formatRemainingTime, isValidEmail } from './authValidation';
 import { useVerificationTimer } from './useVerificationTimer';
 
 type EmailVerificationProps = {
-  mode: 'signup' | 'reset';
+  mode: 'signup' | 'reset' | 'change-password';
   onVerified: (verifiedEmail: VerifiedEmail) => void;
+  initialEmail?: string;
+  emailLocked?: boolean;
+  disabled?: boolean;
+  legend?: string;
+  showMockHint?: boolean;
 };
 
 const domainOptions = ['gov.kr', 'gmail.com', 'naver.com', 'daum.net', 'hanmail.net'];
 
-export function EmailVerification({ mode, onVerified }: EmailVerificationProps) {
+export function EmailVerification({
+  mode,
+  onVerified,
+  initialEmail = '',
+  emailLocked = false,
+  disabled = false,
+  legend = '이메일',
+  showMockHint = true,
+}: EmailVerificationProps) {
   const domainListId = useId();
-  const [localPart, setLocalPart] = useState('');
-  const [domain, setDomain] = useState('gov.kr');
+  const [initialLocalPart = '', initialDomain = 'gov.kr'] = initialEmail.split('@');
+  const [localPart, setLocalPart] = useState(initialLocalPart);
+  const [domain, setDomain] = useState(initialDomain);
   const [code, setCode] = useState('');
   const [sent, setSent] = useState(false);
   const [verified, setVerified] = useState(false);
@@ -26,7 +40,12 @@ export function EmailVerification({ mode, onVerified }: EmailVerificationProps) 
   const requestController = useRef<AbortController | null>(null);
   const timer = useVerificationTimer();
   const email = `${localPart.trim()}@${domain.trim()}`.toLowerCase();
-  const purpose: VerificationPurpose = mode === 'signup' ? 'signup' : 'password-reset';
+  const purpose: VerificationPurpose =
+    mode === 'signup'
+      ? 'signup'
+      : mode === 'change-password'
+        ? 'password-change'
+        : 'password-reset';
 
   useEffect(() => () => requestController.current?.abort(), []);
 
@@ -99,12 +118,13 @@ export function EmailVerification({ mode, onVerified }: EmailVerificationProps) 
   };
 
   return (
-    <fieldset className="verification" disabled={verified}>
-      <legend>이메일</legend>
+    <fieldset className="verification" disabled={disabled || verified}>
+      <legend>{legend}</legend>
       <div className="email-fields">
         <input
           aria-label="이메일 아이디"
           autoComplete="email"
+          disabled={emailLocked}
           value={localPart}
           onChange={(event) => {
             setLocalPart(event.target.value.replace(/@.*$/, ''));
@@ -115,6 +135,7 @@ export function EmailVerification({ mode, onVerified }: EmailVerificationProps) 
         <input
           aria-label="이메일 도메인"
           list={domainListId}
+          disabled={emailLocked}
           value={domain}
           onChange={(event) => {
             setDomain(event.target.value);
@@ -130,7 +151,7 @@ export function EmailVerification({ mode, onVerified }: EmailVerificationProps) 
           {isSending ? '전송 중' : sent ? '재발송' : '메일 전송'}
         </Button>
       </div>
-      {mode === 'reset' && !sent && !error && (
+      {showMockHint && mode === 'reset' && !sent && !error && (
         <small className="mock-hint">Mock 테스트 계정: name@gov.kr</small>
       )}
       <div className="verification-code-row">

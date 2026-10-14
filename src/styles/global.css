@@ -315,7 +315,7 @@ svg {
   position: absolute;
   top: 46px;
   right: 0;
-  width: 310px;
+  width: 250px;
   padding: 0;
   border: 1px solid var(--fog-200);
   border-radius: 12px;
@@ -371,7 +371,7 @@ svg {
 }
 .profile-menu-shortcuts {
   display: grid;
-  grid-template-columns: 1fr 1.35fr;
+  grid-template-columns: 1fr;
   gap: 8px;
   margin-top: 15px;
 }
@@ -2106,23 +2106,164 @@ svg {
   cursor: not-allowed;
   opacity: 0.58;
 }
-.settings-card {
-  padding: 28px;
+.settings-page {
+  max-width: 880px;
 }
-.settings-heading {
+.settings-back {
+  margin-bottom: 22px;
+  padding: 0;
+  border: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  color: var(--navy-700);
+  font-weight: 700;
+  cursor: pointer;
+}
+.settings-back svg {
+  width: 19px;
+}
+.settings-page-heading {
+  max-width: none;
+  margin-bottom: 32px;
+}
+.settings-panel {
+  margin-bottom: 20px;
+  padding: 28px 30px;
+  border: 1px solid var(--fog-200);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: var(--shadow-sm);
+}
+.settings-section-heading {
+  margin-bottom: 36px;
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 24px;
+  align-items: center;
+  gap: 14px;
 }
-.settings-card h2 {
-  font-size: 18px;
-  margin-bottom: 8px;
+.settings-section-heading > span {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: var(--navy-50);
+  color: var(--navy-700);
 }
-.settings-card p,
+.settings-section-heading svg {
+  width: 20px;
+}
+.settings-section-heading h2 {
+  margin: 0;
+  font-size: 19px;
+}
+.settings-section-heading p,
 .export-error {
   color: var(--ink-500);
   font-size: 13px;
+}
+.settings-field-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.settings-field {
+  display: grid;
+  gap: 7px;
+}
+.settings-field > span,
+.settings-step-label {
+  color: var(--ink-900);
+  font-size: 13px;
+  font-weight: 700;
+}
+.settings-field input {
+  width: 100%;
+  height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--fog-300);
+  border-radius: 8px;
+  font: inherit;
+}
+.settings-field input:disabled {
+  background: var(--fog-100);
+  color: var(--ink-500);
+  cursor: not-allowed;
+  opacity: 1;
+}
+.settings-action-row,
+.settings-password-current {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: end;
+  gap: 14px;
+}
+.settings-action-row {
+  padding: 18px;
+  border: 1px solid var(--fog-200);
+  border-radius: 10px;
+  align-items: center;
+}
+.settings-action-copy strong,
+.settings-action-copy small {
+  display: block;
+}
+.settings-action-copy small {
+  margin-top: 5px;
+  color: var(--ink-500);
+}
+.settings-field--password input:disabled {
+  background: #fff;
+  color: var(--ink-700);
+}
+.settings-verification {
+  margin-top: 24px;
+  padding: 24px;
+  border: 1px solid var(--fog-200);
+  border-radius: 10px;
+  background: var(--fog-50);
+}
+.settings-verification.is-active {
+  border-color: var(--navy-200);
+  background: #fff;
+}
+.settings-step-label {
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.settings-step-label svg {
+  width: 17px;
+  color: var(--navy-700);
+}
+.settings-verification fieldset:disabled,
+.settings-new-password:not(.is-active) {
+  opacity: 0.55;
+}
+.settings-verification .email-fields input:disabled,
+.settings-new-password input:disabled {
+  background: var(--fog-100);
+  color: var(--ink-500);
+  cursor: not-allowed;
+  opacity: 1;
+}
+.settings-new-password {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid var(--fog-200);
+}
+.settings-feedback {
+  margin: 16px 0 0;
+}
+.settings-actions {
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid var(--fog-200);
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
 }
 .export-error {
   margin: 0 24px 14px;
@@ -2670,6 +2811,29 @@ h3 {
   .settings-heading > .button {
     align-self: flex-start;
     margin-bottom: 20px;
+  }
+
+  .settings-field-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-panel {
+    padding: 22px 18px;
+  }
+
+  .settings-action-row,
+  .settings-password-current {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .settings-action-row > .button,
+  .settings-password-current > .button {
+    justify-self: start;
+  }
+
+  .settings-verification {
+    padding: 18px;
   }
 
   .result-title {

@@ -15,7 +15,7 @@ describe('Header profile', () => {
     await userEvent.click(screen.getByRole('button', { name: /박바름/ }));
     expect(screen.getByText('park@gov.kr')).toBeVisible();
     expect(screen.getByRole('menuitem', { name: '계정 설정' })).toBeVisible();
-    expect(screen.getByRole('menuitem', { name: '구글 로그인 관리' })).toBeVisible();
+    expect(screen.queryByRole('menuitem', { name: '구글 로그인 관리' })).not.toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: '내 분석 기록' })).toBeVisible();
     expect(screen.getByRole('menuitem', { name: '로그아웃' })).toBeVisible();
   });

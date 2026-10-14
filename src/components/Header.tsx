@@ -9,7 +9,6 @@ import {
   LogOut,
   RefreshCw,
   Settings,
-  UserRound,
 } from 'lucide-react';
 import type { Screen, User } from '../types';
 import { Brand, Button } from './ui';
@@ -62,11 +61,6 @@ export function Header({
                       icon={<Settings />}
                       label="계정 설정"
                       onClick={() => navigateFromMenu('settings')}
-                    />
-                    <MenuButton
-                      icon={<UserRound />}
-                      label="구글 로그인 관리"
-                      onClick={() => navigateFromMenu('loginManagement')}
                     />
                   </div>
                 </div>
