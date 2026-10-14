@@ -57,7 +57,7 @@ describe('Header profile', () => {
     },
   );
 
-  it('분석 결과 화면에서는 페이지 경로를 유지한다', () => {
+  it('분석 결과 화면에서도 페이지 경로를 표시하지 않는다', () => {
     render(
       <Header
         user={{ name: '박바름', email: 'park@gov.kr' }}
@@ -67,7 +67,7 @@ describe('Header profile', () => {
       />,
     );
 
-    expect(screen.getByText('AI 공공보고서 검증')).toBeInTheDocument();
-    expect(screen.getByText('분석 결과')).toBeInTheDocument();
+    expect(screen.queryByText('AI 공공보고서 검증')).not.toBeInTheDocument();
+    expect(screen.queryByText('분석 결과')).not.toBeInTheDocument();
   });
 });
