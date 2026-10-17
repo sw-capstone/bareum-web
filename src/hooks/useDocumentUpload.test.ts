@@ -1,19 +1,12 @@
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { useDocumentUpload } from './useDocumentUpload';
+import {
+  MAX_FILE_SIZE,
+  MAX_TEXT_LENGTH,
+  useDocumentUpload,
+  validateFile,
+} from './useDocumentUpload';
 describe('useDocumentUpload', () => {
-  it('전체 검사 선택 중에는 개별 검사 변경을 무시한다', () => {
-    const { result } = renderHook(() => useDocumentUpload());
-    expect(result.current.state.scopes).toEqual(['all']);
-    act(() => result.current.dispatch({ type: 'toggleScope', value: 'format' }));
-    expect(result.current.state.scopes).toEqual(['all']);
-  });
-  it('전체 검사를 해제하면 개별 검사를 선택할 수 있다', () => {
-    const { result } = renderHook(() => useDocumentUpload());
-    act(() => result.current.dispatch({ type: 'toggleScope', value: 'all' }));
-    act(() => result.current.dispatch({ type: 'toggleScope', value: 'format' }));
-    expect(result.current.state.scopes).toEqual(['format']);
-  });
   it('현재 보이는 파일 탭의 입력만 분석 요청에 포함한다', () => {
     const { result } = renderHook(() => useDocumentUpload());
     const file = new File(['report'], 'report.pdf', { type: 'application/pdf' });
@@ -39,5 +32,27 @@ describe('useDocumentUpload', () => {
     act(() => result.current.dispatch({ type: 'text', value: '숨겨진 직접 입력 내용' }));
 
     expect(result.current.isValid).toBe(false);
+  });
+  it('파일 처리가 완료되기 전에는 분석을 시작할 수 없다', () => {
+    const { result } = renderHook(() => useDocumentUpload());
+    const file = new File(['report'], 'report.pdf', { type: 'application/pdf' });
+    act(() => result.current.dispatch({ type: 'file', value: file }));
+
+    expect(result.current.state.fileStatus).toBe('processing');
+    expect(result.current.isValid).toBe(false);
+
+    act(() => result.current.dispatch({ type: 'fileStatus', value: 'completed' }));
+    expect(result.current.isValid).toBe(true);
+  });
+  it('지원 형식과 20MB 용량 제한을 검증한다', () => {
+    expect(validateFile(new File(['x'], 'report.txt'))).toContain('지원하지 않는');
+    expect(validateFile(new File([new Uint8Array(MAX_FILE_SIZE + 1)], 'report.pdf'))).toContain(
+      '20MB',
+    );
+  });
+  it('직접 입력은 60,000자를 넘겨 저장하지 않는다', () => {
+    const { result } = renderHook(() => useDocumentUpload());
+    act(() => result.current.dispatch({ type: 'text', value: '가'.repeat(MAX_TEXT_LENGTH + 10) }));
+    expect(result.current.state.text).toHaveLength(MAX_TEXT_LENGTH);
   });
 });

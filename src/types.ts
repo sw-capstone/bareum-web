@@ -1,5 +1,12 @@
 export type Screen =
-  'login' | 'upload' | 'analyzing' | 'failed' | 'dashboard' | 'report' | 'settings';
+  | 'login'
+  | 'upload'
+  | 'analyzing'
+  | 'failed'
+  | 'dashboard'
+  | 'settings'
+  | 'loginManagement'
+  | 'history';
 export type Severity = 'high' | 'medium' | 'low' | 'pending';
 export type IssueStatus = 'open' | 'resolved' | 'ignored';
 export interface User {
@@ -9,18 +16,28 @@ export interface User {
 export interface Evidence {
   source: string;
   quote: string;
+  type?: '법령' | '자치법규' | '행정규칙' | '지침' | '상위계획' | '정책' | '공문' | '방침' | '기타';
+  url?: string;
 }
 export interface Issue {
   id: string;
   level: Severity;
   status: IssueStatus;
-  sectionId: string;
+  sectionId?: string;
   section: string;
+  location?: string;
+  locationOrder?: number;
+  checkArea?: string;
   title: string;
   summary: string;
   original: string;
   suggestion: string;
+  appliedText?: string | null;
+  suggestionAvailable?: boolean;
+  canRegenerate?: boolean;
   explanation: string;
+  pendingReason?: string;
+  userChecks?: string[];
   evidence: Evidence[];
 }
 export interface Segment {

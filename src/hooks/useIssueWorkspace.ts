@@ -1,57 +1,22 @@
-import { useMemo, useReducer } from 'react';
-import type { Issue, IssueStatus } from '../types';
+import { useReducer } from 'react';
+import type { Issue } from '../types';
 
-interface State {
-  original: Issue[];
-  current: Issue[];
-}
 type Action =
-  | { type: 'replace'; issues: Issue[] }
-  | { type: 'change'; issueId: string; status: IssueStatus }
-  | { type: 'revert' }
-  | { type: 'commit' };
+  { type: 'update'; issueId: string; patch: Partial<Issue> } | { type: 'replace'; issues: Issue[] };
 
-function reducer(state: State, action: Action): State {
-  switch (action.type) {
-    case 'replace':
-      return { original: action.issues, current: action.issues };
-    case 'change':
-      return {
-        ...state,
-        current: state.current.map((issue) =>
-          issue.id === action.issueId ? { ...issue, status: action.status } : issue,
-        ),
-      };
-    case 'revert':
-      return { ...state, current: state.original };
-    case 'commit':
-      return { original: state.current, current: state.current };
-  }
+function reducer(issues: Issue[], action: Action): Issue[] {
+  if (action.type === 'replace') return action.issues;
+  return issues.map((issue) =>
+    issue.id === action.issueId ? { ...issue, ...action.patch } : issue,
+  );
 }
 
 export function useIssueWorkspace(initialIssues: Issue[]) {
-  const [state, dispatch] = useReducer(reducer, {
-    original: initialIssues,
-    current: initialIssues,
-  });
-  const { current, original } = state;
-  const changes = useMemo(
-    () =>
-      current.flatMap((issue) => {
-        const savedIssue = original.find((item) => item.id === issue.id);
-        return savedIssue?.status === issue.status
-          ? []
-          : [{ issueId: issue.id, status: issue.status }];
-      }),
-    [current, original],
-  );
+  const [issues, dispatch] = useReducer(reducer, initialIssues);
   return {
-    issues: current,
-    changes,
-    isDirty: changes.length > 0,
-    changeStatus: (issueId: string, status: IssueStatus) =>
-      dispatch({ type: 'change', issueId, status }),
-    revert: () => dispatch({ type: 'revert' }),
-    commit: () => dispatch({ type: 'commit' }),
+    issues,
+    updateIssue: (issueId: string, patch: Partial<Issue>) =>
+      dispatch({ type: 'update', issueId, patch }),
+    replace: (nextIssues: Issue[]) => dispatch({ type: 'replace', issues: nextIssues }),
   };
 }

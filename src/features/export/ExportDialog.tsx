@@ -13,7 +13,7 @@ export function ExportDialog({
   onClose: () => void;
   initialKind?: ExportKind;
 }) {
-  const [kind, setKind] = useState<ExportKind>(initialKind);
+  const [kind] = useState<ExportKind>(initialKind);
   const [format, setFormat] = useState<DocumentFormat>('PDF');
   const exporter = useExport();
   function download() {
@@ -30,43 +30,19 @@ export function ExportDialog({
           <X />
         </button>
       </div>
-      <div className="export-tabs" role="tablist" aria-label="출력 문서 선택">
-        <button
-          role="tab"
-          aria-selected={kind === 'document'}
-          className={kind === 'document' ? 'active' : ''}
-          onClick={() => setKind('document')}
-        >
-          수정 반영 본문
-        </button>
-        <button
-          role="tab"
-          aria-selected={kind === 'report'}
-          className={kind === 'report' ? 'active' : ''}
-          onClick={() => setKind('report')}
-        >
-          분석 리포트 PDF
-        </button>
-      </div>
-      {kind === 'document' && (
-        <label className="select-field">
-          <span>출력 형식</span>
-          <select value={format} onChange={(e) => setFormat(e.target.value as DocumentFormat)}>
-            <option>PDF</option>
-            <option>DOCX</option>
-            <option>HWPX</option>
-          </select>
-        </label>
-      )}
+      <label className="select-field">
+        <span>출력 형식</span>
+        <select value={format} onChange={(e) => setFormat(e.target.value as DocumentFormat)}>
+          <option>PDF</option>
+          <option>DOCX</option>
+          <option>HWPX</option>
+        </select>
+      </label>
       <div className="export-info">
         <FileText />
         <div>
-          <strong>{kind === 'report' ? `${result.title} 품질 리포트` : result.title}</strong>
-          <p>
-            {kind === 'report'
-              ? '분석 결과와 영역별 품질 점수를 PDF로 출력합니다.'
-              : `수정 반영 본문 · ${format}`}
-          </p>
+          <strong>{result.title}</strong>
+          <p>수정 반영 본문 · {format}</p>
         </div>
       </div>
       {exporter.isError && (
