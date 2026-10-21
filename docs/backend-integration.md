@@ -80,6 +80,7 @@
 `POST /analyses` · `multipart/form-data`
 
 - `file` 또는 `text` 중 하나
+- `title`: 직접 입력 방식에서만 필수이며, 앞뒤 공백을 제거한 1~255자 보고서 이름
 - `documentType`: 문서 유형
 
 응답: `{ "analysisId": "string" }`
@@ -93,6 +94,7 @@
   "status": "processing",
   "progress": 48,
   "step": "규정",
+  "title": "갯벌축제 계획 보고서",
   "filename": "갯벌축제_계획_v3.hwpx",
   "documentType": "계획 보고서",
   "checks": [

@@ -7,6 +7,7 @@ const processingAnalysis = {
   status: 'processing' as const,
   progress: 50,
   step: '표현',
+  title: '지역 축제 계획 보고서',
   filename: '계획서.pdf',
   documentType: '계획 보고서',
   checks: [
@@ -31,6 +32,7 @@ describe('AnalysisPage', () => {
       expect.stringContaining('정합성'),
     ]);
     expect(screen.getByText('표현 검사를 수행하고 있습니다')).toBeInTheDocument();
+    expect(screen.getByText('지역 축제 계획 보고서')).toBeInTheDocument();
   });
 
   it('분석 취소 전에 확인 안내를 표시한다', async () => {

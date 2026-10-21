@@ -85,6 +85,7 @@ export const analysisProgressSchema = z.object({
   ]),
   progress: z.number().min(0).max(100),
   step: z.string(),
+  title: z.string().optional(),
   filename: z.string().optional(),
   documentType: z.string().optional(),
   checks: z.array(analysisCheckSchema).optional(),

@@ -12,6 +12,7 @@ import { request } from './httpClient';
 export interface AnalysisRequest {
   file?: File;
   text?: string;
+  title?: string;
   documentType: string;
 }
 
@@ -26,6 +27,8 @@ const wait = (ms: number, signal?: AbortSignal) =>
 
 let mockProgress = 0;
 let mockPaused = false;
+let mockTitle = sampleResult.title;
+let mockFilename = sampleResult.filename;
 const mockCheckLabels = ['구조', '규정', '표현', '정합성', '수정안', '점수'];
 
 function createMockChecks(progress: number) {
@@ -46,6 +49,8 @@ export const analysisApi = {
     if (env.useMockApi) {
       mockProgress = 0;
       mockPaused = false;
+      mockTitle = input.title?.trim() || input.file?.name || sampleResult.title;
+      mockFilename = input.file?.name || `${mockTitle}.txt`;
       await wait(250, signal);
       return { analysisId: 'analysis-demo' };
     }
@@ -53,6 +58,7 @@ export const analysisApi = {
     const body = new FormData();
     if (input.file) body.append('file', input.file);
     if (input.text) body.append('text', input.text);
+    if (input.title) body.append('title', input.title);
     body.append('documentType', input.documentType);
     const data = await request<unknown>('/analyses', { method: 'POST', body }, signal);
     return startAnalysisResponseSchema.parse(data);
@@ -67,7 +73,8 @@ export const analysisApi = {
           status: 'paused',
           progress: mockProgress,
           step: '분석 일시 정지',
-          filename: '갯벌축제_계획_v3.hwpx',
+          title: mockTitle,
+          filename: mockFilename,
           documentType: '계획 보고서',
           checks,
         };
@@ -78,7 +85,8 @@ export const analysisApi = {
         status: mockProgress >= 100 ? 'completed' : 'processing',
         progress: mockProgress,
         step: checks.find((check) => check.status === 'processing')?.label ?? '분석 완료',
-        filename: '갯벌축제_계획_v3.hwpx',
+        title: mockTitle,
+        filename: mockFilename,
         documentType: '계획 보고서',
         checks,
       };
@@ -90,7 +98,7 @@ export const analysisApi = {
   async getResult(id: string, signal?: AbortSignal): Promise<AnalysisResult> {
     if (env.useMockApi) {
       await wait(200, signal);
-      return structuredClone(sampleResult);
+      return { ...structuredClone(sampleResult), title: mockTitle, filename: mockFilename };
     }
     const data = await request<unknown>(`/analyses/${id}/result`, {}, signal);
     return analysisResultSchema.parse(data);
