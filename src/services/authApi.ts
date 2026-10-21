@@ -8,7 +8,7 @@ import {
   verifyEmailResponseSchema,
 } from './contracts';
 
-export type VerificationPurpose = 'signup' | 'password-reset';
+export type VerificationPurpose = 'signup' | 'password-reset' | 'password-change';
 
 export type VerifiedEmail = {
   email: string;
@@ -46,6 +46,7 @@ export const authApi = {
   ): Promise<User> {
     if (env.useMockApi) {
       await wait(150, signal);
+      registerEmail(input.email);
       return { name: '박바름', email: input.email };
     }
     const data = await request<unknown>(
@@ -70,7 +71,7 @@ export const authApi = {
       if (purpose === 'signup' && isRegisteredEmail(email)) {
         throw new ApiError('이미 가입된 이메일입니다.', 409, 'EMAIL_ALREADY_REGISTERED');
       }
-      if (purpose === 'password-reset' && !isRegisteredEmail(email)) {
+      if (purpose !== 'signup' && !isRegisteredEmail(email)) {
         throw new ApiError('가입되어 있지 않은 이메일입니다.', 404, 'EMAIL_NOT_REGISTERED');
       }
       return { expiresIn: 300, devCode: MOCK_VERIFICATION_CODE };
@@ -145,6 +146,24 @@ export const authApi = {
       '/auth/password-reset',
       {
         method: 'POST',
+        body: JSON.stringify(input),
+      },
+      signal,
+    );
+  },
+
+  async changePassword(
+    input: { password: string; verificationToken: string },
+    signal?: AbortSignal,
+  ) {
+    if (env.useMockApi) {
+      await wait(150, signal);
+      return;
+    }
+    await request<void>(
+      '/account/password',
+      {
+        method: 'PATCH',
         body: JSON.stringify(input),
       },
       signal,
