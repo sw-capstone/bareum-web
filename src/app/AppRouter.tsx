@@ -31,7 +31,6 @@ import { useSignupFlow } from '../features/auth/signupFlow';
 import { UploadPage } from '../features/upload/UploadPage';
 import { AnalysisPage, FailedPage } from '../features/analysis/AnalysisPage';
 import { ResultPage } from '../features/result/ResultPage';
-import { ExportDialog } from '../features/export/ExportDialog';
 import { SettingsPage } from '../features/settings/SettingsPage';
 import {
   AnalysisHistoryPage,
@@ -50,7 +49,6 @@ import {
   setRecentAnalysis,
   type RecentAnalysis,
 } from '../features/account/recentAnalysis';
-import type { ExportKind } from '../services/exportApi';
 import { authApi } from '../services/authApi';
 import { ApiError } from '../services/httpClient';
 
@@ -67,8 +65,6 @@ function AppShell() {
   const { user, logout } = useSession();
   const navigate = useNavigate();
   const location = useLocation();
-  const [exportOpen, setExportOpen] = useState(false);
-  const [exportKind, setExportKind] = useState<ExportKind>('document');
   const [recentAnalysis, setRecentAnalysisState] = useState<RecentAnalysis | null>(() =>
     getRecentAnalysis(),
   );
@@ -88,11 +84,6 @@ function AppShell() {
     window.addEventListener('beforeunload', warn);
     return () => window.removeEventListener('beforeunload', warn);
   }, [isUnfinishedResult]);
-  const exportResult = useAnalysisResult(screen === 'dashboard' ? id : '');
-  const openExport = (kind: ExportKind) => {
-    setExportKind(kind);
-    setExportOpen(true);
-  };
   const markRecentResult = useCallback((analysisId: string) => {
     const next = { id: analysisId, status: 'result' as const };
     setRecentAnalysis(next);
@@ -141,14 +132,7 @@ function AppShell() {
           }
         }}
       />
-      <Outlet context={{ openExport, markRecentResult }} />
-      {exportOpen && exportResult.data && (
-        <ExportDialog
-          result={exportResult.data}
-          initialKind={exportKind}
-          onClose={() => setExportOpen(false)}
-        />
-      )}
+      <Outlet context={{ markRecentResult }} />
       {pendingNavigation && (
         <Modal
           label="분석 결과 화면 나가기"
@@ -350,8 +334,7 @@ function ReportHistoryRoute() {
 }
 function ResultRoute() {
   const { id = '' } = useParams();
-  const { openExport, markRecentResult } = useOutletContext<{
-    openExport: (kind: ExportKind) => void;
+  const { markRecentResult } = useOutletContext<{
     markRecentResult: (analysisId: string) => void;
   }>();
   const query = useAnalysisResult(id);
@@ -365,7 +348,6 @@ function ResultRoute() {
       key={id}
       result={query.data}
       analysisId={id}
-      onExport={() => openExport('document')}
       onFinish={() =>
         completeAnalysis({
           id,
