@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   BookOpen,
   ChevronDown,
-  Download,
   ExternalLink,
   FileCheck2,
   HelpCircle,
@@ -17,6 +16,7 @@ import { Button, Modal } from '../../components/ui';
 import { useIssueFilters } from '../../hooks/useIssueFilters';
 import { useIssueWorkspace } from '../../hooks/useIssueWorkspace';
 import { useRegenerateSuggestion, useSaveIssueChanges } from '../../hooks/useAnalysis';
+import { ExportMenu } from '../export/ExportDialog';
 
 const severityLabels: Record<Severity, string> = {
   high: '높음',
@@ -28,12 +28,10 @@ const severityLabels: Record<Severity, string> = {
 export function ResultPage({
   result,
   analysisId,
-  onExport,
   onFinish,
 }: {
   result: AnalysisResult;
   analysisId: string;
-  onExport: () => void;
   onFinish: () => void;
 }) {
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -108,10 +106,7 @@ export function ResultPage({
             <FileCheck2 />
             수정 끝내기
           </Button>
-          <Button size="sm" onClick={onExport}>
-            <Download />
-            내보내기
-          </Button>
+          <ExportMenu result={result} />
         </div>
       </div>
 
