@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { Button } from '../../components/ui';
 import { ApiError } from '../../services/httpClient';
 import { authApi, type VerifiedEmail, type VerificationPurpose } from '../../services/authApi';
+import { env } from '../../config/env';
 import { formatRemainingTime, isValidEmail } from './authValidation';
 import { useVerificationTimer } from './useVerificationTimer';
 
@@ -78,7 +79,19 @@ export function EmailVerification({
     }
     setIsSending(true);
     try {
-      const result = await authApi.sendVerification(email, purpose, beginRequest());
+      const signal = beginRequest();
+      if (!sent && mode !== 'change-password') {
+        const { available } = await authApi.checkEmailAvailability(email, signal);
+        if (mode === 'signup' && !available) {
+          throw new ApiError('이미 가입된 이메일입니다.', 409, 'EMAIL_ALREADY_REGISTERED');
+        }
+        if (mode === 'reset' && available) {
+          throw new ApiError('가입되어 있지 않은 이메일입니다.', 404, 'EMAIL_NOT_REGISTERED');
+        }
+      }
+      const result = sent
+        ? await authApi.resendVerification(email, purpose, signal)
+        : await authApi.sendVerification(email, purpose, signal);
       setSent(true);
       setVerified(false);
       setCode('');
@@ -151,9 +164,11 @@ export function EmailVerification({
           {isSending ? '전송 중' : sent ? '재발송' : '메일 전송'}
         </Button>
       </div>
-      {showMockHint && mode === 'reset' && !sent && !error && (
-        <small className="mock-hint">Mock 테스트 계정: name@gov.kr</small>
-      )}
+      {showMockHint &&
+        !env.hasApiCapability('email-verification') &&
+        mode === 'reset' &&
+        !sent &&
+        !error && <small className="mock-hint">Mock 테스트 계정: name@gov.kr</small>}
       <div className="verification-code-row">
         <span className="verification-code-input">
           <input

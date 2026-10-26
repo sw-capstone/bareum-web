@@ -774,6 +774,13 @@ svg {
   background: var(--fog-200);
   flex: 1;
 }
+.google-login-notice {
+  display: block;
+  margin-top: -14px;
+  color: var(--fog-500);
+  font-size: 11px;
+  text-align: center;
+}
 .signup {
   text-align: center;
   color: var(--ink-500);

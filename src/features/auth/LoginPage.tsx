@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Eye, EyeOff, LogIn } from 'lucide-react';
 import { Brand, Button, Checkbox, Field } from '../../components/ui';
+import { env } from '../../config/env';
 
 type LoginPageProps = {
   onLogin: (credentials: {
@@ -112,10 +113,25 @@ export function LoginPage({ onLogin, onForgotPassword, onSignup }: LoginPageProp
             또는
             <span />
           </div>
-          <Button type="button" variant="secondary" size="lg">
+          <Button
+            type="button"
+            variant="secondary"
+            size="lg"
+            disabled
+            title={
+              env.googleIdentityConfigured
+                ? '서버 Google 로그인 API 배포 후 활성화됩니다.'
+                : 'Google 웹 Client ID 설정이 필요합니다.'
+            }
+          >
             <LogIn />
-            Google로 계속하기
+            Google 로그인 준비 중
           </Button>
+          <small className="google-login-notice">
+            {env.googleIdentityConfigured
+              ? 'Google 인증 설정을 완료했습니다. 서버 로그인 API 배포 후 사용할 수 있습니다.'
+              : 'Google 로그인 설정을 확인하고 있습니다.'}
+          </small>
           <p className="signup">
             아직 계정이 없으신가요?{' '}
             <button type="button" className="text-link" onClick={onSignup}>
