@@ -1,79 +1,56 @@
-# 백엔드 연동 가정
+# 백엔드 연동 계약
 
-아래 엔드포인트와 필드는 프론트 개발을 위한 현재 연동 가정이며, 서버의 확정 계약이 아닙니다. 공개 API 계약이 합의되면 서버 계약을 기준으로 이 문서와 `src/services/contracts.ts`·`src/services/analysisApi.ts`를 함께 갱신합니다. 화면에서는 HTTP 요청을 직접 처리하지 않습니다.
+서버 `develop`에 머지된 API만 실제 연동 대상으로 활성화합니다. 아직 머지되지 않은 기능은 기존 Mock 흐름을 유지하며, capability 목록에 추가하지 않습니다. 화면에서는 HTTP 요청을 직접 처리하지 않습니다.
 
 ## 환경 변수
 
-| 이름                | 설명                | 개발 기본값                 |
-| ------------------- | ------------------- | --------------------------- |
-| `VITE_API_BASE_URL` | API 공통 주소       | `http://localhost:8080/api` |
-| `VITE_USE_MOCK_API` | 샘플 응답 사용 여부 | `true`                      |
+| 이름                    | 설명                                               | 개발 기본값                                   |
+| ----------------------- | -------------------------------------------------- | --------------------------------------------- |
+| `VITE_API_BASE_URL`     | 동일 출처 API 프록시 경로                          | `/api`                                        |
+| `VITE_USE_MOCK_API`     | 미연동 기능의 샘플 응답 사용 여부                  | `true`                                        |
+| `VITE_API_CAPABILITIES` | 실제 서버를 호출할 머지 완료 기능의 쉼표 구분 목록 | `email-availability,email-verification,terms` |
+| `VITE_GOOGLE_CLIENT_ID` | Google Identity Services용 웹 Client ID            | 빈 값                                         |
 
-## 예상 API
+실제 환경별 값은 Git에 포함되지 않는 `.env.local` 또는 Vercel Environment Variables로 관리합니다. `.env.example`은 필요한 키와 안전한 개발 기본값만 문서화합니다. Google 웹 Client ID는 브라우저에 공개되는 식별자이지만, 환경별 교체와 운영 관리를 위해 코드에 직접 저장하지 않습니다. Client Secret은 어떤 프론트 설정에도 저장하지 않습니다.
 
-### 인증 API
+브라우저는 `/api` 동일 출처만 호출합니다. 로컬 Vite는 이를 `https://api.bareum.site/api/v1`로 프록시하고, Vercel도 같은 rewrite를 사용합니다. 현재 개발 서버가 CORS 응답 헤더를 제공하지 않아도 공개 인증 기반 API를 사용할 수 있으며, 서버 CORS 배포 후 직접 호출 방식으로 전환할 때는 쿠키·CSRF 정책을 함께 재검토합니다.
 
-인증 화면은 `src/services/authApi.ts`만 호출하며, 화면 컴포넌트는 Mock 저장소나 HTTP 세부 구현을 직접 참조하지 않습니다. 아래 경로와 오류 코드는 프론트 연동을 위한 제안 계약이므로 서버 담당자와 확정 후 함께 수정합니다.
+현재 실제 연동 capability는 다음 세 가지입니다.
 
-#### 이메일 인증번호 발송
+- `email-availability`
+- `email-verification`
+- `terms`
 
-`POST /auth/email-verifications`
+### 머지 완료 API
 
-요청:
+#### 이메일 사용 가능 여부
 
-```json
-{ "email": "name@gov.kr", "purpose": "signup | password-reset" }
-```
+`GET /auth/email/availability?email={email}`
 
-응답: `{ "expiresIn": 300 }`
+응답: `{ "available": true }`
 
-#### 이메일 인증번호 확인
+#### 이메일 인증
 
-`POST /auth/email-verifications/confirm`
+- `POST /auth/email-verification`: 발송 접수
+- `GET /auth/email-verification/deliveries/:requestId`: 발송 상태 조회
+- `POST /auth/email-verification/resend`: 재발송
+- `POST /auth/email-verification/code`: 인증번호 확인
 
-요청:
+발송·재발송 요청의 `purpose`는 `SIGNUP | PASSWORD_RESET`을 사용합니다. 발송 응답이 `PENDING`이면 `requestId`로 상태를 조회하고 `SENT`가 된 시점의 `expiresIn`으로 화면 타이머를 시작합니다. `FAILED | CANCELLED`는 사용자에게 실패로 안내합니다.
 
-```json
-{ "email": "name@gov.kr", "purpose": "signup | password-reset", "code": "123456" }
-```
+#### 약관 목록
 
-응답: `{ "verificationToken": "일회성 인증 토큰" }`
+`GET /terms`
 
-인증 토큰은 가입 또는 비밀번호 재설정 요청에만 사용하며 브라우저 저장소에 보관하지 않습니다. 서버도 용도와 만료시간을 다시 검증해야 합니다.
+서버는 `termId`, `code`, `version`, `required`를 반환합니다. 약관 본문은 아직 응답에 포함되지 않으므로 화면 문구는 프론트 정의를 사용하고, 서버 응답으로 코드·버전·필수 여부를 검증합니다. 필수 약관 코드가 누락되거나 조회가 실패하면 가입 진행을 차단합니다.
 
-#### 회원가입
+#### 아직 실제 연동하지 않는 기능
 
-`POST /auth/signup`
+이메일 회원가입·로그인·로그아웃·토큰 갱신, 비밀번호 재설정·변경, Google 로그인·가입, 보고서·분석·내보내기는 서버 `develop`에 해당 API가 머지된 뒤 capability와 공개 계약을 추가합니다.
 
-요청에는 `name`, `email`, `password`, `verificationToken`과 `agreements`를 포함합니다. 성공 응답은 `204 No Content`를 사용합니다.
+## 미연동 Mock 계약
 
-#### 비밀번호 재설정
-
-`POST /auth/password-reset`
-
-요청에는 `email`, `password`, `verificationToken`을 포함합니다. 성공 응답은 `204 No Content`를 사용합니다.
-
-예상 오류 코드는 `EMAIL_ALREADY_REGISTERED`, `EMAIL_NOT_REGISTERED`, `INVALID_VERIFICATION_CODE`, `VERIFICATION_EXPIRED`입니다. 공통 오류 본문 형식은 아래 오류 형식을 따릅니다.
-
-로그인 세션을 쿠키로 관리할지 액세스 토큰으로 관리할지는 아직 확정되지 않았습니다. 쿠키 방식이면 CORS와 `credentials` 정책을, 토큰 방식이면 갱신·폐기·저장 위치를 서버와 함께 결정해야 합니다.
-
-#### 로그인 및 로그아웃
-
-`POST /auth/login`
-
-요청:
-
-```json
-{ "email": "name@gov.kr", "password": "...", "keepSignedIn": true }
-```
-
-응답:
-
-```json
-{ "user": { "name": "박바름", "email": "name@gov.kr" } }
-```
-
-`POST /auth/logout`은 성공 시 `204 No Content`를 반환합니다. 로그인하지 않은 사용자가 보호 화면에 접근하면 프론트는 로그인 화면으로 이동시키며, 서버도 모든 보호 API에서 세션 또는 토큰을 별도로 검증해야 합니다.
+아래 기능은 화면 개발을 위한 Mock 계약이며 서버 `develop`에 API가 머지되기 전까지 실제 호출하지 않습니다.
 
 ### 분석 생성
 

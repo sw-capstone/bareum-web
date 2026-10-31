@@ -4,12 +4,23 @@ export const severitySchema = z.enum(['high', 'medium', 'low', 'pending']);
 export const issueStatusSchema = z.enum(['open', 'resolved', 'ignored']);
 export const userSchema = z.object({ name: z.string().min(1), email: z.string().email() });
 export const loginResponseSchema = z.object({ user: userSchema });
-export const sendVerificationResponseSchema = z.object({
-  expiresIn: z.number().int().positive(),
+export const verificationDeliverySchema = z.object({
+  requestId: z.string().uuid(),
+  status: z.enum(['PENDING', 'SENT', 'FAILED', 'CANCELLED']),
+  expiresIn: z.number().int().nonnegative(),
 });
 export const verifyEmailResponseSchema = z.object({
   verificationToken: z.string().min(1),
+  expiresIn: z.number().int().positive(),
 });
+export const emailAvailabilitySchema = z.object({ available: z.boolean() });
+export const termSchema = z.object({
+  termId: z.number().int().positive(),
+  code: z.enum(['AGE_OVER_14', 'TERMS_OF_SERVICE', 'PRIVACY_POLICY', 'MARKETING_CONSENT']),
+  version: z.string().min(1),
+  required: z.boolean(),
+});
+export const termsSchema = z.array(termSchema);
 
 const evidenceSchema = z.object({
   source: z.string(),

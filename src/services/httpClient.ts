@@ -16,12 +16,13 @@ export async function request<T>(
   init: RequestInit = {},
   signal?: AbortSignal,
 ): Promise<T> {
+  const hasJsonBody = init.body != null && !(init.body instanceof FormData);
   const response = await fetch(`${env.apiBaseUrl}${path}`, {
     ...init,
     signal,
     headers: {
       Accept: 'application/json',
-      ...(!(init.body instanceof FormData) && { 'Content-Type': 'application/json' }),
+      ...(hasJsonBody && { 'Content-Type': 'application/json' }),
       ...init.headers,
     },
   });
@@ -29,7 +30,7 @@ export async function request<T>(
   if (!response.ok) {
     const body = await response.json().catch(() => null);
     throw new ApiError(
-      body?.message ?? '서버 요청을 처리하지 못했습니다.',
+      body?.detail ?? body?.message ?? body?.title ?? '서버 요청을 처리하지 못했습니다.',
       response.status,
       body?.code,
     );
