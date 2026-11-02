@@ -149,6 +149,21 @@ describe('ResultPage document view', () => {
     expect(finalSentence).toHaveValue(sampleResult.issues[0].suggestion);
   });
 
+  it('수정안 반영 안내를 제목 옆 정보 팁으로 제공한다', async () => {
+    renderResult();
+
+    await userEvent.click(
+      screen.getByRole('button', {
+        name: /사업 개요에 근거 법령이 명시되지 않았습니다/,
+      }),
+    );
+
+    const helpButton = screen.getByRole('button', { name: '수정안 안내' });
+    const tooltip = screen.getByRole('tooltip');
+    expect(helpButton).toHaveAttribute('aria-describedby', tooltip.id);
+    expect(tooltip).toHaveTextContent('새 수정안은 적용하기 전까지 본문에 반영되지 않습니다.');
+  });
+
   it('적용 완료 문장은 잠그고 적용 취소 후 상세 화면에서 다시 편집할 수 있게 한다', async () => {
     renderResult();
 
