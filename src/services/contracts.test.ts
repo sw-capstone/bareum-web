@@ -8,9 +8,33 @@ describe('analysisResultSchema', () => {
   it('잘못된 점수를 거부한다', () => {
     expect(() => analysisResultSchema.parse({ ...sampleResult, score: 120 })).toThrow();
   });
+  it('서버 응답의 분해된 한글 문서명을 조합형으로 정규화한다', () => {
+    const title = '경영지원팀 보고서';
+    const result = analysisResultSchema.parse({
+      ...sampleResult,
+      title: title.normalize('NFD'),
+      filename: `${title}.pdf`.normalize('NFD'),
+    });
+
+    expect(result.title).toBe(title);
+    expect(result.filename).toBe(`${title}.pdf`);
+  });
 });
 
 describe('analysisProgressSchema', () => {
+  it('분석 중 화면의 한글 문서명도 정규화한다', () => {
+    const title = '경영지원팀 보고서';
+    const progress = analysisProgressSchema.parse({
+      status: 'processing',
+      progress: 48,
+      step: '표현',
+      title: title.normalize('NFD'),
+      filename: `${title}.pdf`.normalize('NFD'),
+    });
+
+    expect(progress.title).toBe(title);
+    expect(progress.filename).toBe(`${title}.pdf`);
+  });
   it('검사별 완료 및 실패 상태를 전달된 순서대로 허용한다', () => {
     const progress = analysisProgressSchema.parse({
       status: 'partial_failed',

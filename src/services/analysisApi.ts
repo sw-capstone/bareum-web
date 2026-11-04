@@ -49,8 +49,8 @@ export const analysisApi = {
     if (env.useMockApi) {
       mockProgress = 0;
       mockPaused = false;
-      mockTitle = input.title?.trim() || input.file?.name || sampleResult.title;
-      mockFilename = input.file?.name || `${mockTitle}.txt`;
+      mockTitle = (input.title?.trim() || input.file?.name || sampleResult.title).normalize('NFC');
+      mockFilename = (input.file?.name || `${mockTitle}.txt`).normalize('NFC');
       await wait(250, signal);
       return { analysisId: 'analysis-demo' };
     }

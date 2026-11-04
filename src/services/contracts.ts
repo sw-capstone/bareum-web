@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+const documentNameSchema = z.string().transform((name) => name.normalize('NFC'));
+
 export const severitySchema = z.enum(['high', 'medium', 'low', 'pending']);
 export const issueStatusSchema = z.enum(['open', 'resolved', 'ignored']);
 export const userSchema = z.object({ name: z.string().min(1), email: z.string().email() });
@@ -59,8 +61,8 @@ const issueSchema = z.object({
 
 export const analysisResultSchema = z.object({
   id: z.string(),
-  title: z.string(),
-  filename: z.string(),
+  title: documentNameSchema,
+  filename: documentNameSchema,
   reviewedAt: z.string(),
   score: z.number().min(0).max(100),
   grade: z.string(),
@@ -96,8 +98,8 @@ export const analysisProgressSchema = z.object({
   ]),
   progress: z.number().min(0).max(100),
   step: z.string(),
-  title: z.string().optional(),
-  filename: z.string().optional(),
+  title: documentNameSchema.optional(),
+  filename: documentNameSchema.optional(),
   documentType: z.string().optional(),
   checks: z.array(analysisCheckSchema).optional(),
   errorCode: z.string().optional(),
