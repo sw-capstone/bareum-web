@@ -774,13 +774,6 @@ svg {
   background: var(--fog-200);
   flex: 1;
 }
-.google-login-notice {
-  display: block;
-  margin-top: -14px;
-  color: var(--fog-500);
-  font-size: 11px;
-  text-align: center;
-}
 .signup {
   text-align: center;
   color: var(--ink-500);
@@ -2466,7 +2459,7 @@ h3 {
 .analysis-document-name {
   display: block;
   max-width: 560px;
-  margin: 8px auto 0;
+  margin: 8px 0 0;
   overflow: hidden;
   color: var(--navy-700);
   font-size: 14px;
@@ -3093,15 +3086,9 @@ body {
   align-items: center;
   justify-content: space-between;
 }
-.export-popover__head span {
-  color: var(--teal-700);
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-}
 .export-popover__head h2 {
-  margin-top: 2px;
-  font-size: 20px;
+  margin: 0;
+  font-size: 17px;
 }
 .export-popover__head > button {
   width: 34px;

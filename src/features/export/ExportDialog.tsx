@@ -85,10 +85,7 @@ export function ExportMenu({ result }: { result: AnalysisResult }) {
       {open && (
         <section className="export-popover" role="dialog" aria-label="내보내기 메뉴">
           <div className="export-popover__head">
-            <div>
-              <span>EXPORT</span>
-              <h2>내보내기</h2>
-            </div>
+            <h2>내보내기</h2>
             <button
               type="button"
               aria-label="내보내기 메뉴 닫기"

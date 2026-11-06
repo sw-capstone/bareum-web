@@ -127,11 +127,6 @@ export function LoginPage({ onLogin, onForgotPassword, onSignup }: LoginPageProp
             <LogIn />
             Google 로그인 준비 중
           </Button>
-          <small className="google-login-notice">
-            {env.googleIdentityConfigured
-              ? 'Google 인증 설정을 완료했습니다. 서버 로그인 API 배포 후 사용할 수 있습니다.'
-              : 'Google 로그인 설정을 확인하고 있습니다.'}
-          </small>
           <p className="signup">
             아직 계정이 없으신가요?{' '}
             <button type="button" className="text-link" onClick={onSignup}>
