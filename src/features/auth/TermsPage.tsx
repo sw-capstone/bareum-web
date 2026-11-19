@@ -5,10 +5,17 @@ import { AuthShell } from './AuthShell';
 import { authApi } from '../../services/authApi';
 import { ApiError } from '../../services/httpClient';
 import { useSignupFlow } from './signupFlow';
+import { useSession } from '../../contexts/session';
+import { clearAnalysisSession } from '../account/recentAnalysis';
 
 type Agreement = true | false | null;
 
-const terms = [
+const termDefinitions: Array<{
+  id: 'age' | 'service' | 'privacy' | 'marketing';
+  title: string;
+  required: boolean;
+  content: string;
+}> = [
   {
     id: 'age',
     title: '만 14세 이상 가입',
@@ -35,15 +42,16 @@ const terms = [
     content:
       '새로운 기능과 서비스 관련 소식을 이메일로 받을 수 있습니다. 동의하지 않아도 서비스 이용에는 제한이 없습니다.',
   },
-] as const;
+];
 
 export function TermsPage() {
   const navigate = useNavigate();
   const { draft } = useSignupFlow();
+  const { login } = useSession();
   const [agreements, setAgreements] = useState<Record<string, Agreement>>({});
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const requiredAccepted = terms
+  const requiredAccepted = termDefinitions
     .filter((term) => term.required)
     .every((term) => agreements[term.id] === true);
 
@@ -51,24 +59,35 @@ export function TermsPage() {
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (Date.now() - draft.verifiedAt > 10 * 60 * 1000) {
-      setError('이메일 인증 유효시간이 만료되었습니다. 다시 인증해 주세요.');
+    if (
+      Date.now() > (draft.kind === 'google' ? draft.expiresAt : draft.verifiedAt + 10 * 60 * 1000)
+    ) {
+      setError(
+        draft.kind === 'google'
+          ? 'Google 가입 유효시간이 만료되었습니다. 다시 로그인해 주세요.'
+          : '이메일 인증 유효시간이 만료되었습니다. 다시 인증해 주세요.',
+      );
       return;
     }
     if (!requiredAccepted) return;
     setError('');
     setIsSubmitting(true);
     try {
-      await authApi.signup({
-        ...draft,
-        agreements: {
-          age: agreements.age === true,
-          service: agreements.service === true,
-          privacy: agreements.privacy === true,
-          marketing: agreements.marketing === true,
-        },
-      });
-      navigate('/login', { replace: true });
+      const selectedAgreements = {
+        age: agreements.age === true,
+        service: agreements.service === true,
+        privacy: agreements.privacy === true,
+        marketing: agreements.marketing === true,
+      };
+      if (draft.kind === 'google') {
+        const user = await authApi.googleSignup(draft.signupToken, selectedAgreements);
+        clearAnalysisSession();
+        login(user);
+        navigate('/upload', { replace: true });
+      } else {
+        await authApi.signup({ ...draft, agreements: selectedAgreements });
+        navigate('/login', { replace: true });
+      }
     } catch (cause) {
       setError(
         cause instanceof ApiError
@@ -87,7 +106,7 @@ export function TermsPage() {
           <h1>약관 동의</h1>
         </div>
         <div className="terms-list">
-          {terms.map((term) => (
+          {termDefinitions.map((term) => (
             <section className="term-item" key={term.id}>
               <h2>
                 {term.title} <span>({term.required ? '필수' : '선택'})</span>

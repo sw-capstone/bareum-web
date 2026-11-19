@@ -2,6 +2,7 @@ import { createContext, useContext } from 'react';
 import type { User } from '../types';
 export interface SessionValue {
   user: User | null;
+  isLoading: boolean;
   login: (user: User) => void;
   logout: () => void;
 }

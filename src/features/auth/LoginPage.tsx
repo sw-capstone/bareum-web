@@ -1,6 +1,22 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Eye, EyeOff, LogIn } from 'lucide-react';
 import { Brand, Button, Checkbox, Field } from '../../components/ui';
+import { env } from '../../config/env';
+import { ApiError } from '../../services/httpClient';
+import { GoogleLoginButton } from './GoogleLoginButton';
+
+function emailLoginErrorMessage(cause: unknown) {
+  if (
+    cause instanceof ApiError &&
+    (cause.code === 'AUTH-0014' || (cause.status === 401 && !cause.code))
+  ) {
+    return '이메일 또는 비밀번호가 올바르지 않습니다';
+  }
+  if (cause instanceof ApiError && (cause.status === 403 || cause.status === 429)) {
+    return cause.message;
+  }
+  return '로그인에 실패했습니다. 다시 시도해주세요.';
+}
 
 type LoginPageProps = {
   onLogin: (credentials: {
@@ -10,15 +26,21 @@ type LoginPageProps = {
   }) => Promise<void>;
   onForgotPassword?: () => void;
   onSignup?: () => void;
+  onGoogleLogin?: (idToken: string) => Promise<void>;
 };
 
-export function LoginPage({ onLogin, onForgotPassword, onSignup }: LoginPageProps) {
+export function LoginPage({ onLogin, onForgotPassword, onSignup, onGoogleLogin }: LoginPageProps) {
   const [email, setEmail] = useState('');
   const [pw, setPw] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [keep, setKeep] = useState(true);
+  const liveAuth = env.hasApiCapability('auth-session');
+  const googleReady =
+    liveAuth && env.hasApiCapability('google-auth') && env.googleIdentityConfigured;
+  const [keep, setKeep] = useState(!liveAuth);
   const [error, setError] = useState('');
+  const [googleError, setGoogleError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const googleSubmitting = useRef(false);
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!email || !pw) {
@@ -29,10 +51,22 @@ export function LoginPage({ onLogin, onForgotPassword, onSignup }: LoginPageProp
     try {
       await onLogin({ email, password: pw, keepSignedIn: keep });
     } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : '로그인하지 못했습니다. 다시 시도해 주세요.',
-      );
+      setError(emailLoginErrorMessage(cause));
     } finally {
+      setIsSubmitting(false);
+    }
+  }
+  async function handleGoogleCredential(idToken: string) {
+    if (!onGoogleLogin || isSubmitting || googleSubmitting.current) return;
+    googleSubmitting.current = true;
+    setGoogleError('');
+    setIsSubmitting(true);
+    try {
+      await onGoogleLogin(idToken);
+    } catch (cause) {
+      setGoogleError(cause instanceof Error ? cause.message : 'Google 로그인에 실패했습니다.');
+    } finally {
+      googleSubmitting.current = false;
       setIsSubmitting(false);
     }
   }
@@ -99,7 +133,7 @@ export function LoginPage({ onLogin, onForgotPassword, onSignup }: LoginPageProp
             {error && <small role="alert">{error}</small>}
           </label>
           <div className="form-row">
-            <Checkbox checked={keep} onChange={setKeep} label="로그인 상태 유지" />
+            {!liveAuth && <Checkbox checked={keep} onChange={setKeep} label="로그인 상태 유지" />}
             <button type="button" className="text-link" onClick={onForgotPassword}>
               비밀번호 찾기
             </button>
@@ -112,10 +146,19 @@ export function LoginPage({ onLogin, onForgotPassword, onSignup }: LoginPageProp
             또는
             <span />
           </div>
-          <Button type="button" variant="secondary" size="lg">
-            <LogIn />
-            Google로 계속하기
-          </Button>
+          {googleReady && onGoogleLogin ? (
+            <GoogleLoginButton onCredential={handleGoogleCredential} />
+          ) : (
+            <Button type="button" variant="secondary" size="lg" disabled>
+              <LogIn />
+              Google 로그인 준비 중
+            </Button>
+          )}
+          {googleError && (
+            <p className="form-error" role="alert">
+              {googleError}
+            </p>
+          )}
           <p className="signup">
             아직 계정이 없으신가요?{' '}
             <button type="button" className="text-link" onClick={onSignup}>

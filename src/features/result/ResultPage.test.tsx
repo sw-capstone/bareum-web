@@ -1,8 +1,10 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { sampleResult } from '../../mocks/analysis';
 import { ResultPage } from './ResultPage';
+
+const { exportMutateAsync } = vi.hoisted(() => ({ exportMutateAsync: vi.fn() }));
 
 vi.mock('../../hooks/useAnalysis', () => ({
   useSaveIssueChanges: () => ({
@@ -12,19 +14,27 @@ vi.mock('../../hooks/useAnalysis', () => ({
   useRegenerateSuggestion: () => ({ isPending: false, mutateAsync: vi.fn() }),
 }));
 
+vi.mock('../../hooks/useExport', () => ({
+  useExport: () => ({ mutateAsync: exportMutateAsync }),
+}));
+
 function renderResult(analysisId = sampleResult.id) {
   return render(
     <ResultPage
       key={analysisId}
       result={{ ...sampleResult, id: analysisId }}
       analysisId={analysisId}
-      onExport={vi.fn()}
       onFinish={vi.fn()}
     />,
   );
 }
 
 describe('ResultPage document view', () => {
+  beforeEach(() => {
+    exportMutateAsync.mockReset();
+    exportMutateAsync.mockResolvedValue(undefined);
+  });
+
   it('처음에는 결과 대시보드를 표시하고 전체보기는 열지 않는다', () => {
     renderResult();
 
@@ -53,12 +63,33 @@ describe('ResultPage document view', () => {
         key="analysis-2"
         result={{ ...sampleResult, id: 'analysis-2' }}
         analysisId="analysis-2"
-        onExport={vi.fn()}
         onFinish={vi.fn()}
       />,
     );
 
     expect(screen.queryByRole('dialog', { name: '문서 전체보기' })).not.toBeInTheDocument();
+  });
+
+  it('내보내기 버튼 아래에서 메뉴를 열고 배경을 가리지 않는다', async () => {
+    renderResult();
+
+    await userEvent.click(screen.getByRole('button', { name: '내보내기' }));
+
+    expect(screen.getByRole('dialog', { name: '내보내기 메뉴' })).toBeVisible();
+    expect(document.querySelector('.overlay')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('파일 형식')).toHaveValue('PDF');
+  });
+
+  it('다운로드 중에는 버튼을 비활성화하고 메뉴 하단에 진행 상태를 표시한다', async () => {
+    exportMutateAsync.mockImplementation(() => new Promise(() => undefined));
+    renderResult();
+
+    await userEvent.click(screen.getByRole('button', { name: '내보내기' }));
+    await userEvent.click(screen.getByRole('button', { name: '다운로드' }));
+
+    expect(screen.getByRole('button', { name: '다운로드 중' })).toBeDisabled();
+    expect(screen.getByText('파일을 준비하고 있습니다')).toBeVisible();
+    expect(screen.getByRole('progressbar', { name: '다운로드 진행률' })).toBeVisible();
   });
 
   it('위치를 특정할 수 없는 판단보류 이슈는 최종 적용 문장을 수정할 수 없다', async () => {
@@ -116,6 +147,21 @@ describe('ResultPage document view', () => {
     await userEvent.click(screen.getByRole('button', { name: '수정안 적용' }));
 
     expect(finalSentence).toHaveValue(sampleResult.issues[0].suggestion);
+  });
+
+  it('수정안 반영 안내를 제목 옆 정보 팁으로 제공한다', async () => {
+    renderResult();
+
+    await userEvent.click(
+      screen.getByRole('button', {
+        name: /사업 개요에 근거 법령이 명시되지 않았습니다/,
+      }),
+    );
+
+    const helpButton = screen.getByRole('button', { name: '수정안 안내' });
+    const tooltip = screen.getByRole('tooltip');
+    expect(helpButton).toHaveAttribute('aria-describedby', tooltip.id);
+    expect(tooltip).toHaveTextContent('새 수정안은 적용하기 전까지 본문에 반영되지 않습니다.');
   });
 
   it('적용 완료 문장은 잠그고 적용 취소 후 상세 화면에서 다시 편집할 수 있게 한다', async () => {

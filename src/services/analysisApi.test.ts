@@ -24,3 +24,16 @@ describe('analysisApi mock pause/resume', () => {
     expect(resumed.progress).toBeGreaterThan(beforePause.progress);
   });
 });
+
+describe('analysisApi document names', () => {
+  it('분해된 한글 파일명을 분석 중 화면과 결과 화면에서 정상적으로 표시한다', async () => {
+    const filename = '[결과] 경영지원팀_2021년 보고서.pdf';
+    const file = new File(['보고서'], filename.normalize('NFD'), { type: 'application/pdf' });
+    const { analysisId } = await analysisApi.start({ file, documentType: '계획 보고서' });
+
+    expect((await analysisApi.getProgress(analysisId)).title).toBe(filename);
+    const result = await analysisApi.getResult(analysisId);
+    expect(result.title).toBe(filename);
+    expect(result.filename).toBe(filename);
+  });
+});

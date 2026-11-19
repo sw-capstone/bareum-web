@@ -31,7 +31,6 @@ import { useSignupFlow } from '../features/auth/signupFlow';
 import { UploadPage } from '../features/upload/UploadPage';
 import { AnalysisPage, FailedPage } from '../features/analysis/AnalysisPage';
 import { ResultPage } from '../features/result/ResultPage';
-import { ExportDialog } from '../features/export/ExportDialog';
 import { SettingsPage } from '../features/settings/SettingsPage';
 import {
   AnalysisHistoryPage,
@@ -50,9 +49,10 @@ import {
   setRecentAnalysis,
   type RecentAnalysis,
 } from '../features/account/recentAnalysis';
-import type { ExportKind } from '../services/exportApi';
 import { authApi } from '../services/authApi';
 import { ApiError } from '../services/httpClient';
+import { useQueryClient } from '@tanstack/react-query';
+import { clearAnalysisSession } from '../features/account/recentAnalysis';
 
 function screenFor(pathname: string): Screen {
   if (pathname.startsWith('/history')) return 'history';
@@ -65,14 +65,19 @@ function screenFor(pathname: string): Screen {
 }
 function AppShell() {
   const { user, logout } = useSession();
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    const clear = () => queryClient.clear();
+    window.addEventListener('bareum:session-expired', clear);
+    return () => window.removeEventListener('bareum:session-expired', clear);
+  }, [queryClient]);
   const navigate = useNavigate();
   const location = useLocation();
-  const [exportOpen, setExportOpen] = useState(false);
-  const [exportKind, setExportKind] = useState<ExportKind>('document');
   const [recentAnalysis, setRecentAnalysisState] = useState<RecentAnalysis | null>(() =>
     getRecentAnalysis(),
   );
   const [pendingNavigation, setPendingNavigation] = useState<Screen | null>(null);
+  const [logoutError, setLogoutError] = useState('');
   useEffect(() => {
     const update = () => setRecentAnalysisState(getRecentAnalysis());
     window.addEventListener(RECENT_ANALYSIS_EVENT, update);
@@ -88,11 +93,6 @@ function AppShell() {
     window.addEventListener('beforeunload', warn);
     return () => window.removeEventListener('beforeunload', warn);
   }, [isUnfinishedResult]);
-  const exportResult = useAnalysisResult(screen === 'dashboard' ? id : '');
-  const openExport = (kind: ExportKind) => {
-    setExportKind(kind);
-    setExportOpen(true);
-  };
   const markRecentResult = useCallback((analysisId: string) => {
     const next = { id: analysisId, status: 'result' as const };
     setRecentAnalysis(next);
@@ -135,20 +135,21 @@ function AppShell() {
         onLogout={async () => {
           try {
             await authApi.logout();
-          } finally {
+            queryClient.clear();
+            clearAnalysisSession();
             logout();
             navigate('/login');
+          } catch {
+            setLogoutError('로그아웃하지 못했습니다. 잠시 후 다시 시도해 주세요.');
           }
         }}
       />
-      <Outlet context={{ openExport, markRecentResult }} />
-      {exportOpen && exportResult.data && (
-        <ExportDialog
-          result={exportResult.data}
-          initialKind={exportKind}
-          onClose={() => setExportOpen(false)}
-        />
+      {logoutError && (
+        <p className="session-error" role="alert">
+          {logoutError}
+        </p>
       )}
+      <Outlet context={{ markRecentResult }} />
       {pendingNavigation && (
         <Modal
           label="분석 결과 화면 나가기"
@@ -186,21 +187,40 @@ function AppShell() {
   );
 }
 function RequireSession() {
-  const { user } = useSession();
+  const { user, isLoading } = useSession();
+  if (isLoading) return <PageLoading label="로그인 상태를 확인하고 있습니다" />;
   if (!user) return <Navigate to="/login" replace />;
   return <AppShell />;
 }
 function LoginRoute() {
-  const { login } = useSession();
-  const { clearDraft } = useSignupFlow();
+  const { login, user, isLoading } = useSession();
+  const { clearDraft, setDraft } = useSignupFlow();
   const navigate = useNavigate();
   useEffect(() => clearDraft(), [clearDraft]);
+  if (isLoading) return <PageLoading label="로그인 상태를 확인하고 있습니다" />;
+  if (user) return <Navigate to="/upload" replace />;
   return (
     <LoginPage
       onForgotPassword={() => navigate('/forgot-password')}
       onLogin={async (credentials) => {
         const user = await authApi.login(credentials);
+        clearAnalysisSession();
         login(user);
+        navigate('/upload');
+      }}
+      onGoogleLogin={async (idToken) => {
+        const result = await authApi.googleLogin(idToken);
+        if (result.status === 'SIGNUP_REQUIRED') {
+          setDraft({
+            kind: 'google',
+            signupToken: result.signupToken,
+            expiresAt: result.expiresAt,
+          });
+          navigate('/terms');
+          return;
+        }
+        clearAnalysisSession();
+        login(result.user);
         navigate('/upload');
       }}
       onSignup={() => navigate('/signup')}
@@ -350,8 +370,7 @@ function ReportHistoryRoute() {
 }
 function ResultRoute() {
   const { id = '' } = useParams();
-  const { openExport, markRecentResult } = useOutletContext<{
-    openExport: (kind: ExportKind) => void;
+  const { markRecentResult } = useOutletContext<{
     markRecentResult: (analysisId: string) => void;
   }>();
   const query = useAnalysisResult(id);
@@ -365,7 +384,6 @@ function ResultRoute() {
       key={id}
       result={query.data}
       analysisId={id}
-      onExport={() => openExport('document')}
       onFinish={() =>
         completeAnalysis({
           id,

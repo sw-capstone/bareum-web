@@ -83,6 +83,11 @@ export function AnalysisPage({
               <FileText />
             </span>
             <h1>문서를 분석하고 있습니다</h1>
+            {(analysis.title || analysis.filename) && (
+              <strong className="analysis-document-name">
+                {analysis.title ?? analysis.filename}
+              </strong>
+            )}
             <p>새로고침하거나 다른 화면으로 이동해도 서버의 분석은 계속됩니다.</p>
             <div
               className="manuscript-progress"

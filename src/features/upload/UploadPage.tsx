@@ -1,4 +1,4 @@
-import { useRef, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import {
   AlertCircle,
   CheckCircle2,
@@ -9,7 +9,11 @@ import {
   UploadCloud,
 } from 'lucide-react';
 import { Button } from '../../components/ui';
-import { MAX_TEXT_LENGTH, useDocumentUpload } from '../../hooks/useDocumentUpload';
+import {
+  MAX_TEXT_LENGTH,
+  MAX_TITLE_LENGTH,
+  useDocumentUpload,
+} from '../../hooks/useDocumentUpload';
 import type { AnalysisRequest } from '../../services/analysisApi';
 
 export function UploadPage({
@@ -23,7 +27,9 @@ export function UploadPage({
 }) {
   const { state, dispatch, selectFile, removeFile, isValid, createRequest } = useDocumentUpload();
   const input = useRef<HTMLInputElement>(null);
+  const [titleTouched, setTitleTouched] = useState(false);
   const isTextLimit = state.text.length >= MAX_TEXT_LENGTH;
+  const isTitleInvalid = titleTouched && !state.title.trim();
   const isProcessing = state.fileStatus === 'processing';
   const analyze = () => isValid && onAnalyze(createRequest());
 
@@ -115,28 +121,55 @@ export function UploadPage({
             </div>
           )
         ) : (
-          <div className="editor">
-            <div className="editor-toolbar">
-              <strong>B</strong>
-              <em>I</em>
-              <span>제목</span>
-              <span>문단</span>
-              <span>번호</span>
-              <span>글머리표</span>
-              <small className={isTextLimit ? 'limit-reached' : ''}>
-                {state.text.length.toLocaleString()} / {MAX_TEXT_LENGTH.toLocaleString()}자
-              </small>
+          <div className="text-entry">
+            <label className={`report-title-field ${isTitleInvalid ? 'is-invalid' : ''}`}>
+              <span>
+                보고서 이름 <b>필수</b>
+              </span>
+              <div>
+                <input
+                  type="text"
+                  value={state.title}
+                  maxLength={MAX_TITLE_LENGTH}
+                  placeholder="보고서 이름을 입력해 주세요."
+                  aria-invalid={isTitleInvalid}
+                  aria-describedby="report-title-help"
+                  onBlur={() => setTitleTouched(true)}
+                  onChange={(event) => dispatch({ type: 'title', value: event.target.value })}
+                />
+                <small>
+                  {state.title.length} / {MAX_TITLE_LENGTH}자
+                </small>
+              </div>
+              <p id="report-title-help">
+                {isTitleInvalid
+                  ? '공백이 아닌 보고서 이름을 입력해 주세요.'
+                  : '분석 진행, 기록, 결과 화면에 표시되는 이름입니다.'}
+              </p>
+            </label>
+            <div className="editor">
+              <div className="editor-toolbar">
+                <strong>B</strong>
+                <em>I</em>
+                <span>제목</span>
+                <span>문단</span>
+                <span>번호</span>
+                <span>글머리표</span>
+                <small className={isTextLimit ? 'limit-reached' : ''}>
+                  {state.text.length.toLocaleString()} / {MAX_TEXT_LENGTH.toLocaleString()}자
+                </small>
+              </div>
+              <textarea
+                value={state.text}
+                maxLength={MAX_TEXT_LENGTH}
+                onChange={(event) => dispatch({ type: 'text', value: event.target.value })}
+                placeholder="검토할 보고서 내용을 붙여 넣으세요."
+                aria-describedby="text-input-help"
+              />
+              <p id="text-input-help" className="editor-help">
+                공백과 줄바꿈을 포함해 최대 60,000자까지 입력할 수 있습니다.
+              </p>
             </div>
-            <textarea
-              value={state.text}
-              maxLength={MAX_TEXT_LENGTH}
-              onChange={(event) => dispatch({ type: 'text', value: event.target.value })}
-              placeholder="검토할 보고서 내용을 붙여 넣으세요."
-              aria-describedby="text-input-help"
-            />
-            <p id="text-input-help" className="editor-help">
-              공백과 줄바꿈을 포함해 최대 60,000자까지 입력할 수 있습니다.
-            </p>
           </div>
         )}
 

@@ -1,11 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
 import {
-  BookOpen,
   ChevronDown,
-  Download,
   ExternalLink,
   FileCheck2,
-  HelpCircle,
+  Info,
   Maximize2,
   Minus,
   Plus,
@@ -17,6 +15,7 @@ import { Button, Modal } from '../../components/ui';
 import { useIssueFilters } from '../../hooks/useIssueFilters';
 import { useIssueWorkspace } from '../../hooks/useIssueWorkspace';
 import { useRegenerateSuggestion, useSaveIssueChanges } from '../../hooks/useAnalysis';
+import { ExportMenu } from '../export/ExportDialog';
 
 const severityLabels: Record<Severity, string> = {
   high: '높음',
@@ -28,12 +27,10 @@ const severityLabels: Record<Severity, string> = {
 export function ResultPage({
   result,
   analysisId,
-  onExport,
   onFinish,
 }: {
   result: AnalysisResult;
   analysisId: string;
-  onExport: () => void;
   onFinish: () => void;
 }) {
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -108,10 +105,7 @@ export function ResultPage({
             <FileCheck2 />
             수정 끝내기
           </Button>
-          <Button size="sm" onClick={onExport}>
-            <Download />
-            내보내기
-          </Button>
+          <ExportMenu result={result} />
         </div>
       </div>
 
@@ -401,7 +395,6 @@ function IssueDetail({
           <Label title="관련 근거">
             {issue.evidence.map((evidence) => (
               <div className="evidence" key={`${evidence.source}-${evidence.quote}`}>
-                <BookOpen />
                 <div>
                   <span>{evidence.type ?? '기타'}</span>
                   <strong>{evidence.source}</strong>
@@ -422,37 +415,37 @@ function IssueDetail({
           </Label>
         )}
         {issue.suggestionAvailable !== false && issue.level !== 'pending' && (
-          <Label title="수정안">
-            <div className="suggestion-toolbar">
-              <span>
-                {issue.canRegenerate === false ? (
-                  <>
-                    <HelpCircle /> 규칙에 따라 정해진 수정안입니다.
-                  </>
-                ) : (
-                  '새 수정안은 적용하기 전까지 본문에 반영되지 않습니다.'
-                )}
-              </span>
-              <Button
-                size="sm"
-                variant="tertiary"
-                disabled={isLocked || issue.canRegenerate === false || regenerate.isPending}
-                onClick={async () => {
-                  const response = await regenerate.mutateAsync(issue.id);
-                  setSuggestion(response.suggestion);
-                }}
-              >
-                <RefreshCw />
-                다른 수정안 받기
-              </Button>
-              <Button
-                size="sm"
-                disabled={isLocked || !suggestion.trim()}
-                onClick={() => setDraft(suggestion)}
-              >
-                수정안 적용
-              </Button>
-            </div>
+          <Label
+            title="수정안"
+            help={
+              issue.canRegenerate === false
+                ? '규칙에 따라 정해진 수정안입니다.'
+                : '새 수정안은 적용하기 전까지 본문에 반영되지 않습니다.'
+            }
+            actions={
+              <div className="suggestion-toolbar">
+                <Button
+                  size="sm"
+                  variant="tertiary"
+                  disabled={isLocked || issue.canRegenerate === false || regenerate.isPending}
+                  onClick={async () => {
+                    const response = await regenerate.mutateAsync(issue.id);
+                    setSuggestion(response.suggestion);
+                  }}
+                >
+                  <RefreshCw />
+                  다른 수정안 받기
+                </Button>
+                <Button
+                  size="sm"
+                  disabled={isLocked || !suggestion.trim()}
+                  onClick={() => setDraft(suggestion)}
+                >
+                  수정안 적용
+                </Button>
+              </div>
+            }
+          >
             <div className="suggestion-preview">{suggestion}</div>
           </Label>
         )}
@@ -585,10 +578,36 @@ function Status({ level }: { level: Severity }) {
     </span>
   );
 }
-function Label({ title, children }: { title: string; children: React.ReactNode }) {
+function Label({
+  title,
+  help,
+  actions,
+  children,
+}: {
+  title: string;
+  help?: string;
+  actions?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  const helpId = useId();
   return (
     <section className="modal-section">
-      <h3>{title}</h3>
+      <div className="modal-section-title">
+        <div className="modal-section-heading">
+          <h3>{title}</h3>
+          {help && (
+            <span className="section-info">
+              <button type="button" aria-label={`${title} 안내`} aria-describedby={helpId}>
+                <Info />
+              </button>
+              <span className="section-info__tooltip" id={helpId} role="tooltip">
+                {help}
+              </span>
+            </span>
+          )}
+        </div>
+        {actions}
+      </div>
       {children}
     </section>
   );

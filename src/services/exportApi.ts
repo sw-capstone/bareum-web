@@ -1,19 +1,17 @@
 import { env } from '../config/env';
 import type { AnalysisResult } from '../types';
-export type ExportKind = 'document';
 export type DocumentFormat = 'PDF' | 'DOCX' | 'HWPX';
 export interface ExportRequest {
-  kind: ExportKind;
   format: DocumentFormat;
   result: AnalysisResult;
 }
 export const exportApi = {
-  async download({ kind, format, result }: ExportRequest) {
+  async download({ format, result }: ExportRequest) {
     if (!env.useMockApi) {
       const response = await fetch(`${env.apiBaseUrl}/analyses/${result.id}/exports`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ kind, format }),
+        body: JSON.stringify({ format }),
       });
       if (!response.ok) throw new Error('내보내기 파일을 생성하지 못했습니다.');
       return {

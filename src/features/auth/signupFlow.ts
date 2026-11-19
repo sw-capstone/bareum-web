@@ -1,12 +1,19 @@
 import { createContext, useContext } from 'react';
 
-export type SignupDraft = {
-  name: string;
-  email: string;
-  password: string;
-  verificationToken: string;
-  verifiedAt: number;
-};
+export type SignupDraft =
+  | {
+      kind: 'email';
+      name: string;
+      email: string;
+      password: string;
+      verificationToken: string;
+      verifiedAt: number;
+    }
+  | {
+      kind: 'google';
+      signupToken: string;
+      expiresAt: number;
+    };
 
 export type SignupFlowValue = {
   draft: SignupDraft | null;

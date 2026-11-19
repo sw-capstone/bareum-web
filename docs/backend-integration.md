@@ -1,85 +1,90 @@
-# 백엔드 연동 가정
+# 백엔드 연동 계약
 
-아래 엔드포인트와 필드는 프론트 개발을 위한 현재 연동 가정이며, 서버의 확정 계약이 아닙니다. 공개 API 계약이 합의되면 서버 계약을 기준으로 이 문서와 `src/services/contracts.ts`·`src/services/analysisApi.ts`를 함께 갱신합니다. 화면에서는 HTTP 요청을 직접 처리하지 않습니다.
+서버 `develop`에 머지된 인증 API는 실제 서버에 연결합니다. 아직 머지되지 않은 분석·내보내기 등은 기존 Mock 흐름을 유지합니다. 화면에서는 HTTP 요청을 직접 처리하지 않습니다.
 
 ## 환경 변수
 
-| 이름                | 설명                | 개발 기본값                 |
-| ------------------- | ------------------- | --------------------------- |
-| `VITE_API_BASE_URL` | API 공통 주소       | `http://localhost:8080/api` |
-| `VITE_USE_MOCK_API` | 샘플 응답 사용 여부 | `true`                      |
+| 이름                     | 설명                                            | 개발 기본값 |
+| ------------------------ | ----------------------------------------------- | ----------- |
+| `VITE_API_BASE_URL`      | 기존 공개 API 프록시 경로                       | `/api`      |
+| `VITE_AUTH_API_BASE_URL` | 인증 쿠키 Path와 일치하는 동일 출처 경로        | `/api/v1`   |
+| `VITE_USE_MOCK_API`      | 아직 미연동인 분석·내보내기 등의 목업 사용 여부 | `true`      |
+| `VITE_GOOGLE_CLIENT_ID`  | Google Identity Services 웹 Client ID           | 빈 값       |
 
-## 예상 API
+실제 환경별 값은 Git에 포함되지 않는 `.env.local` 또는 Vercel Environment Variables로 관리합니다. `.env.example`은 필요한 키와 안전한 개발 기본값만 문서화합니다. Google 웹 Client ID는 브라우저에 공개되는 식별자이지만, 환경별 교체와 운영 관리를 위해 코드에 직접 저장하지 않습니다. Client Secret은 어떤 프론트 설정에도 저장하지 않습니다.
 
-### 인증 API
+브라우저는 동일 출처 경로를 호출합니다. 기존 공개 API는 `/api`에서 서버 `/api/v1`로 전달합니다. 인증 요청은 `/api/v1/auth`를 그대로 전달합니다. 서버 Refresh·CSRF 쿠키의 Path가 `/api/v1/auth`이므로 인증 프록시 경로도 이를 유지해야 합니다. Vite와 Vercel에 두 경로를 모두 설정합니다.
 
-인증 화면은 `src/services/authApi.ts`만 호출하며, 화면 컴포넌트는 Mock 저장소나 HTTP 세부 구현을 직접 참조하지 않습니다. 아래 경로와 오류 코드는 프론트 연동을 위한 제안 계약이므로 서버 담당자와 확정 후 함께 수정합니다.
+실제 API로 연결한 기능은 다음 다섯 가지입니다. `VITE_USE_MOCK_API=true`는 분석 등 미연동 화면에만 적용되며, 아래 인증 기능은 배포 환경 변수로 Mock으로 되돌릴 수 없습니다.
 
-#### 이메일 인증번호 발송
+- `email-availability`
+- `email-verification`
+- `email-signup`
+- `auth-session`
+- `google-auth`
 
-`POST /auth/email-verifications`
+### 머지 완료 API
 
-요청:
+#### 이메일 사용 가능 여부
 
-```json
-{ "email": "name@gov.kr", "purpose": "signup | password-reset" }
-```
+`GET /auth/email/availability?email={email}`
 
-응답: `{ "expiresIn": 300 }`
+응답: `{ "available": true }`
 
-#### 이메일 인증번호 확인
+#### 이메일 인증
 
-`POST /auth/email-verifications/confirm`
+- `POST /auth/email-verification`: 발송 접수
+- `GET /auth/email-verification/deliveries/:requestId`: 발송 상태 조회
+- `POST /auth/email-verification/resend`: 재발송
+- `POST /auth/email-verification/code`: 인증번호 확인
 
-요청:
+발송·재발송 요청의 `purpose`는 `SIGNUP | PASSWORD_RESET`을 사용합니다. 발송 응답이 `PENDING`이면 `requestId`로 상태를 조회하고 `SENT`가 된 시점의 `expiresIn`으로 화면 타이머를 시작합니다. `FAILED | CANCELLED`는 사용자에게 실패로 안내합니다.
 
-```json
-{ "email": "name@gov.kr", "purpose": "signup | password-reset", "code": "123456" }
-```
+#### 약관 동의
 
-응답: `{ "verificationToken": "일회성 인증 토큰" }`
+화면의 약관 제목·본문·필수 여부는 프론트에서 정의합니다. 화면은 `GET /terms`를 호출하지 않으며, `age`, `service`, `privacy`에 모두 동의하면 가입 버튼을 활성화합니다. 선택 항목인 `marketing`은 동의하지 않아도 가입할 수 있습니다. 가입 요청에는 네 항목의 동의 여부를 `agreements`의 boolean 값으로 모두 전달합니다.
 
-인증 토큰은 가입 또는 비밀번호 재설정 요청에만 사용하며 브라우저 저장소에 보관하지 않습니다. 서버도 용도와 만료시간을 다시 검증해야 합니다.
+서버는 가입 시 활성 약관 레코드와 동의 상태를 대조합니다. 2026-11-19 배포 서버에서 필수 3개·선택 1개의 약관 코드가 조회되는 것을 확인했습니다. 서버 DB 버전 `dev-test-v1`은 내부 기록용이며 프론트에서 전달하지 않습니다. 화면의 임시 약관 문구는 확정된 원문으로 별도 교체해야 합니다.
 
-#### 회원가입
+#### 이메일 가입과 로그인
 
-`POST /auth/signup`
+- `POST /auth/signup`: 인증 완료 증명과 `agreements`를 전달하고 `{ memberId }`를 검증합니다. 가입 후 자동 로그인하지 않습니다.
+- `POST /auth/login/email`: 이메일·비밀번호와 `keepSignedIn: false`를 전달합니다. 서버는 현재 로그인 상태 유지 옵션을 지원하지 않으므로 실제 로그인 화면에서 체크박스를 숨깁니다.
+- `GET /auth/me`: Bearer Access Token으로 사용자 이름과 이메일을 조회합니다. 화면에 표시할 사용자는 이 응답에서 가져옵니다.
 
-요청에는 `name`, `email`, `password`, `verificationToken`과 `agreements`를 포함합니다. 성공 응답은 `204 No Content`를 사용합니다.
+Access Token은 메모리에만 보관합니다. Refresh Token은 서버가 설정한 HttpOnly 쿠키로 관리하며 브라우저 저장소에 복사하지 않습니다. 새로고침 시 아래 갱신 흐름으로 사용자 세션을 복구합니다.
 
-#### 비밀번호 재설정
+#### 토큰 갱신과 로그아웃
 
-`POST /auth/password-reset`
+- `GET /auth/csrf`: `credentials: include`로 호출해 응답의 마스킹된 CSRF 토큰을 받습니다.
+- `POST /auth/token/renew`: 같은 쿠키와 `X-CSRF-TOKEN` 헤더를 전달합니다. 동시 갱신은 한 요청으로 합치고, 401이 난 보호 요청은 새 Access Token으로 한 번만 다시 시도합니다.
+- `POST /auth/logout`: 새 CSRF 값을 조회한 뒤 쿠키와 헤더를 전달합니다. 응답은 204이며 프론트의 토큰·사용자·분석 임시 상태와 조회 캐시를 비웁니다.
 
-요청에는 `email`, `password`, `verificationToken`을 포함합니다. 성공 응답은 `204 No Content`를 사용합니다.
+#### Google 로그인과 가입
 
-예상 오류 코드는 `EMAIL_ALREADY_REGISTERED`, `EMAIL_NOT_REGISTERED`, `INVALID_VERIFICATION_CODE`, `VERIFICATION_EXPIRED`입니다. 공통 오류 본문 형식은 아래 오류 형식을 따릅니다.
+Google Identity Services 버튼은 웹 Client ID가 설정되고 `google-auth` 및 `auth-session` capability가 활성화된 경우에만 렌더링합니다.
 
-로그인 세션을 쿠키로 관리할지 액세스 토큰으로 관리할지는 아직 확정되지 않았습니다. 쿠키 방식이면 CORS와 `credentials` 정책을, 토큰 방식이면 갱신·폐기·저장 위치를 서버와 함께 결정해야 합니다.
+- `POST /auth/login/google`: Google ID Token과 CSRF 쿠키·헤더를 전달합니다. `LOGIN`이면 토큰을 저장한 뒤 `/auth/me`를 조회합니다. `SIGNUP_REQUIRED`이면 `signupToken`을 메모리에 보관하고 약관 동의 화면으로 이동합니다.
+- `POST /auth/signup/google`: 가입 증명과 동의 상태를 전달합니다. 성공하면 자동 로그인 토큰을 받은 뒤 `/auth/me`를 조회합니다.
 
-#### 로그인 및 로그아웃
+Google 신규 가입의 이메일·이름은 서버가 ID Token에서 확인한 정보를 사용하며, 이메일 가입 양식을 다시 요청하지 않습니다.
 
-`POST /auth/login`
+2026-11-19 배포 서버는 무효 ID Token에 `401 AUTH-0024`를 반환해 이전 `503 AUTH-0025` 설정 오류가 해소된 것을 확인했습니다. Vercel의 `VITE_GOOGLE_CLIENT_ID`는 Production과 Preview/develop 모두 서버에 등록한 웹 Client ID로 수정했습니다. 이 변경은 새 배포에서 적용됩니다. 실제 Google 계정 로그인·가입은 새 배포 후 브라우저에서 확인해야 합니다.
 
-요청:
+#### 아직 실제 연동하지 않는 기능
 
-```json
-{ "email": "name@gov.kr", "password": "...", "keepSignedIn": true }
-```
+비밀번호 재설정·변경, 분석·결과·이슈 수정·내보내기·기록은 대응 API가 서버 `develop`에 머지되기 전까지 목업을 유지합니다. PDF 보고서 접수와 원본 삭제는 병합됐지만 분석 시작 API가 아직 없어 이번 연결 범위에서 제외합니다. DOCX·HWPX 및 직접 입력 접수도 이번 연결 범위에서 제외합니다.
 
-응답:
+## 미연동 Mock 계약
 
-```json
-{ "user": { "name": "박바름", "email": "name@gov.kr" } }
-```
-
-`POST /auth/logout`은 성공 시 `204 No Content`를 반환합니다. 로그인하지 않은 사용자가 보호 화면에 접근하면 프론트는 로그인 화면으로 이동시키며, 서버도 모든 보호 API에서 세션 또는 토큰을 별도로 검증해야 합니다.
+아래 기능은 화면 개발을 위한 Mock 계약이며 서버 `develop`에 API가 머지되기 전까지 실제 호출하지 않습니다.
 
 ### 분석 생성
 
 `POST /analyses` · `multipart/form-data`
 
 - `file` 또는 `text` 중 하나
+- `title`: 직접 입력 방식에서만 필수이며, 앞뒤 공백을 제거한 1~255자 보고서 이름
 - `documentType`: 문서 유형
 
 응답: `{ "analysisId": "string" }`
@@ -93,6 +98,7 @@
   "status": "processing",
   "progress": 48,
   "step": "규정",
+  "title": "갯벌축제 계획 보고서",
   "filename": "갯벌축제_계획_v3.hwpx",
   "documentType": "계획 보고서",
   "checks": [
