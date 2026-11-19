@@ -23,6 +23,13 @@ const RECORDS_KEY = 'bareum:analysis-records';
 const DEMO_RECORDS_KEY = 'bareum:analysis-records-demo-created';
 export const RECENT_ANALYSIS_EVENT = 'bareum:recent-analysis-changed';
 
+export function clearAnalysisSession() {
+  sessionStorage.removeItem(STORAGE_KEY);
+  sessionStorage.removeItem(RECORDS_KEY);
+  sessionStorage.removeItem(DEMO_RECORDS_KEY);
+  window.dispatchEvent(new Event(RECENT_ANALYSIS_EVENT));
+}
+
 export function getRecentAnalysis(): RecentAnalysis | null {
   try {
     const value = sessionStorage.getItem(STORAGE_KEY);

@@ -1,25 +1,27 @@
 # 백엔드 연동 계약
 
-서버 `develop`에 머지된 API만 실제 연동 대상으로 활성화합니다. 아직 머지되지 않은 기능은 기존 Mock 흐름을 유지하며, capability 목록에 추가하지 않습니다. 화면에서는 HTTP 요청을 직접 처리하지 않습니다.
+서버 `develop`에 머지된 인증 API는 실제 서버에 연결합니다. 아직 머지되지 않은 분석·내보내기 등은 기존 Mock 흐름을 유지합니다. 화면에서는 HTTP 요청을 직접 처리하지 않습니다.
 
 ## 환경 변수
 
-| 이름                    | 설명                                               | 개발 기본값                                   |
-| ----------------------- | -------------------------------------------------- | --------------------------------------------- |
-| `VITE_API_BASE_URL`     | 동일 출처 API 프록시 경로                          | `/api`                                        |
-| `VITE_USE_MOCK_API`     | 미연동 기능의 샘플 응답 사용 여부                  | `true`                                        |
-| `VITE_API_CAPABILITIES` | 실제 서버를 호출할 머지 완료 기능의 쉼표 구분 목록 | `email-availability,email-verification,terms` |
-| `VITE_GOOGLE_CLIENT_ID` | Google Identity Services용 웹 Client ID            | 빈 값                                         |
+| 이름                     | 설명                                            | 개발 기본값 |
+| ------------------------ | ----------------------------------------------- | ----------- |
+| `VITE_API_BASE_URL`      | 기존 공개 API 프록시 경로                       | `/api`      |
+| `VITE_AUTH_API_BASE_URL` | 인증 쿠키 Path와 일치하는 동일 출처 경로        | `/api/v1`   |
+| `VITE_USE_MOCK_API`      | 아직 미연동인 분석·내보내기 등의 목업 사용 여부 | `true`      |
+| `VITE_GOOGLE_CLIENT_ID`  | Google Identity Services 웹 Client ID           | 빈 값       |
 
 실제 환경별 값은 Git에 포함되지 않는 `.env.local` 또는 Vercel Environment Variables로 관리합니다. `.env.example`은 필요한 키와 안전한 개발 기본값만 문서화합니다. Google 웹 Client ID는 브라우저에 공개되는 식별자이지만, 환경별 교체와 운영 관리를 위해 코드에 직접 저장하지 않습니다. Client Secret은 어떤 프론트 설정에도 저장하지 않습니다.
 
-브라우저는 `/api` 동일 출처만 호출합니다. 로컬 Vite는 이를 `https://api.bareum.site/api/v1`로 프록시하고, Vercel도 같은 rewrite를 사용합니다. 현재 개발 서버가 CORS 응답 헤더를 제공하지 않아도 공개 인증 기반 API를 사용할 수 있으며, 서버 CORS 배포 후 직접 호출 방식으로 전환할 때는 쿠키·CSRF 정책을 함께 재검토합니다.
+브라우저는 동일 출처 경로를 호출합니다. 기존 공개 API는 `/api`에서 서버 `/api/v1`로 전달합니다. 인증 요청은 `/api/v1/auth`를 그대로 전달합니다. 서버 Refresh·CSRF 쿠키의 Path가 `/api/v1/auth`이므로 인증 프록시 경로도 이를 유지해야 합니다. Vite와 Vercel에 두 경로를 모두 설정합니다.
 
-현재 실제 연동 capability는 다음 세 가지입니다.
+실제 API로 연결한 기능은 다음 다섯 가지입니다. `VITE_USE_MOCK_API=true`는 분석 등 미연동 화면에만 적용되며, 아래 인증 기능은 배포 환경 변수로 Mock으로 되돌릴 수 없습니다.
 
 - `email-availability`
 - `email-verification`
-- `terms`
+- `email-signup`
+- `auth-session`
+- `google-auth`
 
 ### 머지 완료 API
 
@@ -38,15 +40,40 @@
 
 발송·재발송 요청의 `purpose`는 `SIGNUP | PASSWORD_RESET`을 사용합니다. 발송 응답이 `PENDING`이면 `requestId`로 상태를 조회하고 `SENT`가 된 시점의 `expiresIn`으로 화면 타이머를 시작합니다. `FAILED | CANCELLED`는 사용자에게 실패로 안내합니다.
 
-#### 약관 목록
+#### 약관 동의
 
-`GET /terms`
+화면의 약관 제목·본문·필수 여부는 프론트에서 정의합니다. 화면은 `GET /terms`를 호출하지 않으며, `age`, `service`, `privacy`에 모두 동의하면 가입 버튼을 활성화합니다. 선택 항목인 `marketing`은 동의하지 않아도 가입할 수 있습니다. 가입 요청에는 네 항목의 동의 여부를 `agreements`의 boolean 값으로 모두 전달합니다.
 
-서버는 `termId`, `code`, `version`, `required`를 반환합니다. 약관 본문은 아직 응답에 포함되지 않으므로 화면 문구는 프론트 정의를 사용하고, 서버 응답으로 코드·버전·필수 여부를 검증합니다. 필수 약관 코드가 누락되거나 조회가 실패하면 가입 진행을 차단합니다.
+서버는 가입 시 활성 약관 레코드와 동의 상태를 대조합니다. 2026-11-19 배포 서버에서 필수 3개·선택 1개의 약관 코드가 조회되는 것을 확인했습니다. 서버 DB 버전 `dev-test-v1`은 내부 기록용이며 프론트에서 전달하지 않습니다. 화면의 임시 약관 문구는 확정된 원문으로 별도 교체해야 합니다.
+
+#### 이메일 가입과 로그인
+
+- `POST /auth/signup`: 인증 완료 증명과 `agreements`를 전달하고 `{ memberId }`를 검증합니다. 가입 후 자동 로그인하지 않습니다.
+- `POST /auth/login/email`: 이메일·비밀번호와 `keepSignedIn: false`를 전달합니다. 서버는 현재 로그인 상태 유지 옵션을 지원하지 않으므로 실제 로그인 화면에서 체크박스를 숨깁니다.
+- `GET /auth/me`: Bearer Access Token으로 사용자 이름과 이메일을 조회합니다. 화면에 표시할 사용자는 이 응답에서 가져옵니다.
+
+Access Token은 메모리에만 보관합니다. Refresh Token은 서버가 설정한 HttpOnly 쿠키로 관리하며 브라우저 저장소에 복사하지 않습니다. 새로고침 시 아래 갱신 흐름으로 사용자 세션을 복구합니다.
+
+#### 토큰 갱신과 로그아웃
+
+- `GET /auth/csrf`: `credentials: include`로 호출해 응답의 마스킹된 CSRF 토큰을 받습니다.
+- `POST /auth/token/renew`: 같은 쿠키와 `X-CSRF-TOKEN` 헤더를 전달합니다. 동시 갱신은 한 요청으로 합치고, 401이 난 보호 요청은 새 Access Token으로 한 번만 다시 시도합니다.
+- `POST /auth/logout`: 새 CSRF 값을 조회한 뒤 쿠키와 헤더를 전달합니다. 응답은 204이며 프론트의 토큰·사용자·분석 임시 상태와 조회 캐시를 비웁니다.
+
+#### Google 로그인과 가입
+
+Google Identity Services 버튼은 웹 Client ID가 설정되고 `google-auth` 및 `auth-session` capability가 활성화된 경우에만 렌더링합니다.
+
+- `POST /auth/login/google`: Google ID Token과 CSRF 쿠키·헤더를 전달합니다. `LOGIN`이면 토큰을 저장한 뒤 `/auth/me`를 조회합니다. `SIGNUP_REQUIRED`이면 `signupToken`을 메모리에 보관하고 약관 동의 화면으로 이동합니다.
+- `POST /auth/signup/google`: 가입 증명과 동의 상태를 전달합니다. 성공하면 자동 로그인 토큰을 받은 뒤 `/auth/me`를 조회합니다.
+
+Google 신규 가입의 이메일·이름은 서버가 ID Token에서 확인한 정보를 사용하며, 이메일 가입 양식을 다시 요청하지 않습니다.
+
+2026-11-19 배포 서버는 무효 ID Token에 `401 AUTH-0024`를 반환해 이전 `503 AUTH-0025` 설정 오류가 해소된 것을 확인했습니다. Vercel의 `VITE_GOOGLE_CLIENT_ID`는 Production과 Preview/develop 모두 서버에 등록한 웹 Client ID로 수정했습니다. 이 변경은 새 배포에서 적용됩니다. 실제 Google 계정 로그인·가입은 새 배포 후 브라우저에서 확인해야 합니다.
 
 #### 아직 실제 연동하지 않는 기능
 
-이메일 회원가입·로그인·로그아웃·토큰 갱신, 비밀번호 재설정·변경, Google 로그인·가입, 보고서·분석·내보내기는 서버 `develop`에 해당 API가 머지된 뒤 capability와 공개 계약을 추가합니다.
+비밀번호 재설정·변경, 분석·결과·이슈 수정·내보내기·기록은 대응 API가 서버 `develop`에 머지되기 전까지 목업을 유지합니다. PDF 보고서 접수와 원본 삭제는 병합됐지만 분석 시작 API가 아직 없어 이번 연결 범위에서 제외합니다. DOCX·HWPX 및 직접 입력 접수도 이번 연결 범위에서 제외합니다.
 
 ## 미연동 Mock 계약
 

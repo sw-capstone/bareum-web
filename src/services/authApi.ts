@@ -1,10 +1,20 @@
 import { env } from '../config/env';
 import { isRegisteredEmail, MOCK_VERIFICATION_CODE, registerEmail } from '../mocks/auth';
-import { ApiError, request } from './httpClient';
+import {
+  ApiError,
+  clearAccessToken,
+  getCsrfToken,
+  renewAccessToken,
+  request,
+  setAccessToken,
+} from './httpClient';
 import type { User } from '../types';
 import {
   emailAvailabilitySchema,
-  loginResponseSchema,
+  currentUserSchema,
+  emailSignupResponseSchema,
+  googleLoginResponseSchema,
+  loginTokenSchema,
   verificationDeliverySchema,
   verifyEmailResponseSchema,
 } from './contracts';
@@ -26,6 +36,12 @@ export type SignupRequest = {
   verificationToken: string;
   agreements: Record<SignupAgreement, boolean>;
 };
+
+async function fetchCurrentUser(signal?: AbortSignal): Promise<User> {
+  const data = await request<unknown>('/auth/me', {}, signal, { auth: 'required' });
+  const user = currentUserSchema.parse(data);
+  return { name: user.name, email: user.email };
+}
 
 const wait = (ms: number, signal?: AbortSignal) =>
   new Promise<void>((resolve, reject) => {
@@ -122,6 +138,13 @@ async function mockSendVerification(
 }
 
 export const authApi = {
+  currentUser: fetchCurrentUser,
+
+  async restoreSession(): Promise<User> {
+    await renewAccessToken();
+    return fetchCurrentUser();
+  },
+
   async checkEmailAvailability(email: string, signal?: AbortSignal) {
     if (!env.hasApiCapability('email-availability')) {
       return { available: !isRegisteredEmail(email) };
@@ -138,25 +161,101 @@ export const authApi = {
     input: { email: string; password: string; keepSignedIn: boolean },
     signal?: AbortSignal,
   ): Promise<User> {
-    if (env.useMockApi) {
+    if (!env.hasApiCapability('auth-session')) {
       await wait(150, signal);
       registerEmail(input.email);
       return { name: '박바름', email: input.email };
     }
     const data = await request<unknown>(
-      '/auth/login',
-      { method: 'POST', body: JSON.stringify(input) },
+      '/auth/login/email',
+      {
+        method: 'POST',
+        credentials: 'include',
+        body: JSON.stringify({ email: input.email, password: input.password, keepSignedIn: false }),
+      },
       signal,
+      { auth: 'none' },
     );
-    return loginResponseSchema.parse(data).user;
+    const session = loginTokenSchema.parse(data);
+    setAccessToken(session.accessToken);
+    try {
+      return await fetchCurrentUser(signal);
+    } catch (error) {
+      clearAccessToken();
+      throw error;
+    }
   },
 
   async logout(signal?: AbortSignal) {
-    if (env.useMockApi) {
+    if (!env.hasApiCapability('auth-session')) {
       await wait(80, signal);
       return;
     }
-    await request<void>('/auth/logout', { method: 'POST' }, signal);
+    const csrf = await getCsrfToken();
+    await request<void>(
+      '/auth/logout',
+      { method: 'POST', credentials: 'include', headers: { 'X-CSRF-TOKEN': csrf } },
+      signal,
+      { auth: 'none' },
+    );
+    clearAccessToken();
+  },
+
+  async googleLogin(idToken: string, signal?: AbortSignal) {
+    const csrf = await getCsrfToken();
+    const data = await request<unknown>(
+      '/auth/login/google',
+      {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'X-CSRF-TOKEN': csrf },
+        body: JSON.stringify({ idToken }),
+      },
+      signal,
+      { auth: 'none' },
+    );
+    const result = googleLoginResponseSchema.parse(data);
+    if (result.status === 'SIGNUP_REQUIRED') {
+      return {
+        status: result.status,
+        signupToken: result.signupToken,
+        expiresAt: Date.now() + result.signupExpiresIn * 1000,
+      } as const;
+    }
+    setAccessToken(result.accessToken);
+    try {
+      return { status: result.status, user: await fetchCurrentUser(signal) } as const;
+    } catch (error) {
+      clearAccessToken();
+      throw error;
+    }
+  },
+
+  async googleSignup(
+    signupToken: string,
+    agreements: SignupRequest['agreements'],
+    signal?: AbortSignal,
+  ) {
+    const csrf = await getCsrfToken();
+    const data = await request<unknown>(
+      '/auth/signup/google',
+      {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'X-CSRF-TOKEN': csrf },
+        body: JSON.stringify({ signupToken, agreements }),
+      },
+      signal,
+      { auth: 'none' },
+    );
+    const session = loginTokenSchema.parse(data);
+    setAccessToken(session.accessToken);
+    try {
+      return await fetchCurrentUser(signal);
+    } catch (error) {
+      clearAccessToken();
+      throw error;
+    }
   },
 
   async sendVerification(email: string, purpose: VerificationPurpose, signal?: AbortSignal) {
@@ -205,19 +304,21 @@ export const authApi = {
   },
 
   async signup(input: SignupRequest, signal?: AbortSignal) {
-    if (env.useMockApi) {
+    if (!env.hasApiCapability('email-signup')) {
       await wait(150, signal);
       registerEmail(input.email);
       return;
     }
-    await request<void>(
+    const data = await request<unknown>(
       '/auth/signup',
       {
         method: 'POST',
         body: JSON.stringify(input),
       },
       signal,
+      { auth: 'none' },
     );
+    return emailSignupResponseSchema.parse(data);
   },
 
   async resetPassword(

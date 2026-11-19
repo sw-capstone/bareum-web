@@ -4,20 +4,11 @@ import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import { SignupFlowContext, type SignupFlowValue } from './signupFlow';
 import { TermsPage } from './TermsPage';
-
-vi.mock('../../services/termApi', () => ({
-  termApi: {
-    isLive: () => true,
-    list: vi.fn().mockResolvedValue([
-      { termId: 1, code: 'AGE_OVER_14', version: '1.0', required: true },
-      { termId: 2, code: 'TERMS_OF_SERVICE', version: '1.0', required: true },
-      { termId: 3, code: 'PRIVACY_POLICY', version: '1.0', required: true },
-    ]),
-  },
-}));
+import { SessionProvider } from '../../contexts/SessionProvider';
 
 const signupFlow: SignupFlowValue = {
   draft: {
+    kind: 'email',
     name: '김바름',
     email: 'new@example.com',
     password: 'Password123!',
@@ -28,18 +19,23 @@ const signupFlow: SignupFlowValue = {
   clearDraft: vi.fn(),
 };
 
-describe('TermsPage live terms', () => {
-  it('선택 약관이 없어도 필수 약관을 모두 받으면 가입을 막지 않는다', async () => {
+describe('TermsPage local terms', () => {
+  it('약관 조회 없이 필수 동의만으로 가입 버튼을 활성화한다', async () => {
     const user = userEvent.setup();
     render(
-      <SignupFlowContext.Provider value={signupFlow}>
-        <MemoryRouter>
-          <TermsPage />
-        </MemoryRouter>
-      </SignupFlowContext.Provider>,
+      <SessionProvider>
+        <SignupFlowContext.Provider value={signupFlow}>
+          <MemoryRouter>
+            <TermsPage />
+          </MemoryRouter>
+        </SignupFlowContext.Provider>
+      </SessionProvider>,
     );
 
-    expect(await screen.findAllByText(/v1\.0/)).toHaveLength(3);
+    expect(
+      screen.queryByText('필수 약관 정보를 모두 불러오지 못했습니다.'),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '가입하기' })).toBeDisabled();
     const agreeButtons = screen.getAllByLabelText('동의함');
     await user.click(agreeButtons[0]);
     await user.click(agreeButtons[1]);

@@ -5,7 +5,26 @@ const documentNameSchema = z.string().transform((name) => name.normalize('NFC'))
 export const severitySchema = z.enum(['high', 'medium', 'low', 'pending']);
 export const issueStatusSchema = z.enum(['open', 'resolved', 'ignored']);
 export const userSchema = z.object({ name: z.string().min(1), email: z.string().email() });
-export const loginResponseSchema = z.object({ user: userSchema });
+export const currentUserSchema = userSchema.extend({ memberId: z.number().int().positive() });
+export const loginTokenSchema = z.object({
+  accessToken: z.string().min(1),
+  tokenType: z.literal('Bearer'),
+  expiresIn: z.number().int().positive(),
+  sessionExpiresIn: z.number().int().positive(),
+});
+export const csrfTokenSchema = z.object({
+  headerName: z.literal('X-CSRF-TOKEN'),
+  token: z.string().min(1),
+});
+export const emailSignupResponseSchema = z.object({ memberId: z.number().int().positive() });
+export const googleLoginResponseSchema = z.discriminatedUnion('status', [
+  loginTokenSchema.extend({ status: z.literal('LOGIN') }),
+  z.object({
+    status: z.literal('SIGNUP_REQUIRED'),
+    signupToken: z.string().min(1),
+    signupExpiresIn: z.number().int().positive(),
+  }),
+]);
 export const verificationDeliverySchema = z.object({
   requestId: z.string().uuid(),
   status: z.enum(['PENDING', 'SENT', 'FAILED', 'CANCELLED']),
@@ -16,14 +35,6 @@ export const verifyEmailResponseSchema = z.object({
   expiresIn: z.number().int().positive(),
 });
 export const emailAvailabilitySchema = z.object({ available: z.boolean() });
-export const termSchema = z.object({
-  termId: z.number().int().positive(),
-  code: z.enum(['AGE_OVER_14', 'TERMS_OF_SERVICE', 'PRIVACY_POLICY', 'MARKETING_CONSENT']),
-  version: z.string().min(1),
-  required: z.boolean(),
-});
-export const termsSchema = z.array(termSchema);
-
 const evidenceSchema = z.object({
   source: z.string(),
   quote: z.string(),
