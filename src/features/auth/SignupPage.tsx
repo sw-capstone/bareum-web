@@ -31,6 +31,7 @@ export function SignupPage() {
           if (!canContinue) return;
           if (!verifiedEmail) return;
           setDraft({
+            kind: 'email',
             name: name.trim(),
             email: verifiedEmail.email,
             password,

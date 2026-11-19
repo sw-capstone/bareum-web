@@ -28,7 +28,7 @@ export function EmailVerification({
   showMockHint = true,
 }: EmailVerificationProps) {
   const domainListId = useId();
-  const [initialLocalPart = '', initialDomain = 'gov.kr'] = initialEmail.split('@');
+  const [initialLocalPart = '', initialDomain = ''] = initialEmail.split('@');
   const [localPart, setLocalPart] = useState(initialLocalPart);
   const [domain, setDomain] = useState(initialDomain);
   const [code, setCode] = useState('');

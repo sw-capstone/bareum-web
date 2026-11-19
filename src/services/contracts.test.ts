@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { sampleResult } from '../mocks/analysis';
-import { analysisProgressSchema, analysisResultSchema, loginResponseSchema } from './contracts';
+import {
+  analysisProgressSchema,
+  analysisResultSchema,
+  currentUserSchema,
+  googleLoginResponseSchema,
+  loginTokenSchema,
+} from './contracts';
 describe('analysisResultSchema', () => {
   it('정상적인 백엔드 응답을 허용한다', () => {
     expect(analysisResultSchema.parse(sampleResult).id).toBe('analysis-demo');
@@ -55,11 +61,37 @@ describe('analysisProgressSchema', () => {
   });
 });
 
-describe('loginResponseSchema', () => {
-  it('사용자 이름과 이메일을 검증한다', () => {
+describe('auth response schemas', () => {
+  it('현재 사용자와 로그인 토큰을 서버 형식으로 검증한다', () => {
     expect(
-      loginResponseSchema.parse({ user: { name: '박바름', email: 'name@gov.kr' } }).user.email,
+      currentUserSchema.parse({ memberId: 1, name: '박바름', email: 'name@gov.kr' }).email,
     ).toBe('name@gov.kr');
-    expect(() => loginResponseSchema.parse({ user: { name: '', email: 'invalid' } })).toThrow();
+    expect(
+      loginTokenSchema.parse({
+        accessToken: 'token',
+        tokenType: 'Bearer',
+        expiresIn: 900,
+        sessionExpiresIn: 28800,
+      }).accessToken,
+    ).toBe('token');
+    expect(() => currentUserSchema.parse({ memberId: 0, name: '', email: 'invalid' })).toThrow();
+  });
+  it('Google 기존 회원과 신규 가입 응답을 구분한다', () => {
+    expect(
+      googleLoginResponseSchema.parse({
+        status: 'SIGNUP_REQUIRED',
+        signupToken: 'gs_token',
+        signupExpiresIn: 600,
+      }).status,
+    ).toBe('SIGNUP_REQUIRED');
+    expect(
+      googleLoginResponseSchema.parse({
+        status: 'LOGIN',
+        accessToken: 'token',
+        tokenType: 'Bearer',
+        expiresIn: 900,
+        sessionExpiresIn: 28800,
+      }).status,
+    ).toBe('LOGIN');
   });
 });

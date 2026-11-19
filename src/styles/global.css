@@ -3302,3 +3302,10 @@ body {
     overflow-y: auto;
   }
 }
+.session-error {
+  margin: 0;
+  padding: 10px 24px;
+  background: var(--high-soft);
+  color: var(--high);
+  text-align: center;
+}

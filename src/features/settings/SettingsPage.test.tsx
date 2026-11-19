@@ -16,6 +16,7 @@ describe('SettingsPage', () => {
       <SessionContext.Provider
         value={{
           user: { name: '박바름', email: 'name@gov.kr' },
+          isLoading: false,
           login: vi.fn(),
           logout: vi.fn(),
         }}
@@ -59,6 +60,7 @@ describe('SettingsPage', () => {
       <SessionContext.Provider
         value={{
           user: { name: '박바름', email: 'name@gov.kr' },
+          isLoading: false,
           login: vi.fn(),
           logout: vi.fn(),
         }}

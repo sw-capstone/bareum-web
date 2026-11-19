@@ -6,6 +6,7 @@ import { PasswordResetPage } from './PasswordResetPage';
 import { SignupPage } from './SignupPage';
 import { TermsPage } from './TermsPage';
 import { SignupFlowProvider } from './SignupFlowProvider';
+import { SessionProvider } from '../../contexts/SessionProvider';
 
 describe('인증 화면 흐름', () => {
   beforeEach(() => localStorage.clear());
@@ -13,19 +14,23 @@ describe('인증 화면 흐름', () => {
   it('이메일 인증과 필수 약관 동의 후 회원가입을 완료한다', async () => {
     const user = userEvent.setup();
     render(
-      <SignupFlowProvider>
-        <MemoryRouter initialEntries={['/signup']}>
-          <Routes>
-            <Route path="/signup" element={<SignupPage />} />
-            <Route path="/terms" element={<TermsPage />} />
-            <Route path="/login" element={<h1>로그인 완료 화면</h1>} />
-          </Routes>
-        </MemoryRouter>
-      </SignupFlowProvider>,
+      <SessionProvider>
+        <SignupFlowProvider>
+          <MemoryRouter initialEntries={['/signup']}>
+            <Routes>
+              <Route path="/signup" element={<SignupPage />} />
+              <Route path="/terms" element={<TermsPage />} />
+              <Route path="/login" element={<h1>로그인 완료 화면</h1>} />
+            </Routes>
+          </MemoryRouter>
+        </SignupFlowProvider>
+      </SessionProvider>,
     );
 
     await user.type(screen.getByLabelText('사용자 이름'), '김바름');
+    expect(screen.getByLabelText('이메일 도메인')).toHaveValue('');
     await user.type(screen.getByLabelText('이메일 아이디'), 'new-user');
+    await user.type(screen.getByLabelText('이메일 도메인'), 'example.com');
     await user.click(screen.getByRole('button', { name: '메일 전송' }));
     await screen.findByText(/개발용 인증번호는 123456/);
     await user.type(screen.getByLabelText('인증번호'), '123456');
@@ -48,17 +53,21 @@ describe('인증 화면 흐름', () => {
   it('가입 이메일 인증 후 새 비밀번호를 설정한다', async () => {
     const user = userEvent.setup();
     render(
-      <SignupFlowProvider>
-        <MemoryRouter initialEntries={['/forgot-password']}>
-          <Routes>
-            <Route path="/forgot-password" element={<PasswordResetPage />} />
-            <Route path="/login" element={<h1>로그인 완료 화면</h1>} />
-          </Routes>
-        </MemoryRouter>
-      </SignupFlowProvider>,
+      <SessionProvider>
+        <SignupFlowProvider>
+          <MemoryRouter initialEntries={['/forgot-password']}>
+            <Routes>
+              <Route path="/forgot-password" element={<PasswordResetPage />} />
+              <Route path="/login" element={<h1>로그인 완료 화면</h1>} />
+            </Routes>
+          </MemoryRouter>
+        </SignupFlowProvider>
+      </SessionProvider>,
     );
 
+    expect(screen.getByLabelText('이메일 도메인')).toHaveValue('');
     await user.type(screen.getByLabelText('이메일 아이디'), 'name');
+    await user.type(screen.getByLabelText('이메일 도메인'), 'gov.kr');
     await user.click(screen.getByRole('button', { name: '메일 전송' }));
     await screen.findByText(/개발용 인증번호는 123456/);
     await user.type(screen.getByLabelText('인증번호'), '123456');
