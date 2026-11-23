@@ -31,6 +31,7 @@ describe('removeAnalysisCache', () => {
 
 describe('useStartAnalysis', () => {
   it('새 분석 시작이 성공하면 화면 이동 전에 동일 ID의 완료 캐시를 제거한다', async () => {
+    const file = new File(['새로운 보고서'], 'report.pdf', { type: 'application/pdf' });
     const queryClient = new QueryClient();
     queryClient.setQueryData(analysisKeys.progress('analysis-demo'), {
       status: 'completed',
@@ -42,9 +43,7 @@ describe('useStartAnalysis', () => {
       createElement(QueryClientProvider, { client: queryClient }, children);
     const { result } = renderHook(() => useStartAnalysis(), { wrapper });
 
-    await act(() =>
-      result.current.mutateAsync({ text: '새로운 보고서', documentType: '계획 보고서' }),
-    );
+    await act(() => result.current.mutateAsync({ file, documentType: '계획 보고서' }));
 
     expect(queryClient.getQueryData(analysisKeys.progress('analysis-demo'))).toBeUndefined();
     expect(queryClient.getQueryData(analysisKeys.result('analysis-demo'))).toBeUndefined();
