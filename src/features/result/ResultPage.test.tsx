@@ -50,6 +50,63 @@ describe('ResultPage document view', () => {
     expect(screen.queryByRole('dialog', { name: '문서 전체보기' })).not.toBeInTheDocument();
   });
 
+  it('판단 보류와 일반 이슈를 별도 영역에 표시하고 카드 문구를 구분한다', () => {
+    renderResult();
+
+    const pending = screen.getByRole('region', { name: '판단 보류' });
+    const regular = screen.getByRole('region', { name: '이슈 목록' });
+    expect(within(pending).getByText('1건')).toBeVisible();
+    expect(within(regular).getByText('6건')).toBeVisible();
+    expect(
+      within(pending).getByText(
+        '원문 위치와 셀 구조를 특정할 수 없어 표 관련 검사를 수행하지 못했습니다.',
+      ),
+    ).toBeVisible();
+    expect(
+      within(regular).queryByText(/원문 위치와 셀 구조를 특정할 수 없어/),
+    ).not.toBeInTheDocument();
+    expect(within(regular).getByText(sampleResult.issues[0].suggestion)).toBeVisible();
+    expect(screen.queryByRole('combobox', { name: '처리 상태' })).not.toBeInTheDocument();
+  });
+
+  it('심각도 필터는 일반 이슈에만 적용하고 빈 영역을 안내한다', async () => {
+    const view = renderResult();
+
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: '심각도' }), 'high');
+    expect(
+      within(screen.getByRole('region', { name: '이슈 목록' })).getByText('2건'),
+    ).toBeVisible();
+    expect(
+      within(screen.getByRole('region', { name: '판단 보류' })).getByText('1건'),
+    ).toBeVisible();
+
+    view.rerender(
+      <ResultPage
+        key="empty-analysis"
+        result={{ ...sampleResult, issues: [] }}
+        analysisId="empty-analysis"
+        onFinish={vi.fn()}
+      />,
+    );
+    expect(screen.getByText('판단 보류 이슈가 없습니다.')).toBeVisible();
+    expect(screen.getByText('해당하는 이슈가 없습니다.')).toBeVisible();
+  });
+
+  it('수정안이 없는 일반 이슈는 기존 요약을 카드에 표시한다', () => {
+    const issue = { ...sampleResult.issues[0], suggestionAvailable: false };
+    render(
+      <ResultPage
+        result={{ ...sampleResult, issues: [issue] }}
+        analysisId="no-suggestion"
+        onFinish={vi.fn()}
+      />,
+    );
+
+    expect(
+      within(screen.getByRole('region', { name: '이슈 목록' })).getByText(issue.summary),
+    ).toBeVisible();
+  });
+
   it('문서 목차를 열고 닫으며 선택한 절로 문서 내부를 이동한다', async () => {
     renderResult();
     const scroller = document.querySelector<HTMLDivElement>('.paper-wrap');
@@ -134,7 +191,7 @@ describe('ResultPage document view', () => {
 
     await userEvent.click(
       screen.getByRole('button', {
-        name: /일부 표를 읽지 못해 관련 검사 결과를 판단 보류했습니다/,
+        name: /원문 위치와 셀 구조를 특정할 수 없어 표 관련 검사를 수행하지 못했습니다/,
       }),
     );
 
@@ -151,7 +208,7 @@ describe('ResultPage document view', () => {
 
     await userEvent.click(
       screen.getByRole('button', {
-        name: /일부 표를 읽지 못해 관련 검사 결과를 판단 보류했습니다/,
+        name: /원문 위치와 셀 구조를 특정할 수 없어 표 관련 검사를 수행하지 못했습니다/,
       }),
     );
     await userEvent.click(screen.getByRole('button', { name: '무시' }));
@@ -163,7 +220,7 @@ describe('ResultPage document view', () => {
     );
     expect(
       screen.getByRole('button', {
-        name: /판단보류 무시 일부 표를 읽지 못해 관련 검사 결과를 판단 보류했습니다/,
+        name: /판단보류 무시 원문 위치와 셀 구조를 특정할 수 없어 표 관련 검사를 수행하지 못했습니다/,
       }),
     ).toBeVisible();
   });
@@ -173,7 +230,7 @@ describe('ResultPage document view', () => {
 
     await userEvent.click(
       screen.getByRole('button', {
-        name: /사업 개요에 근거 법령이 명시되지 않았습니다/,
+        name: /본 사업은.*지방재정법/,
       }),
     );
 
@@ -191,7 +248,7 @@ describe('ResultPage document view', () => {
 
     await userEvent.click(
       screen.getByRole('button', {
-        name: /사업 개요에 근거 법령이 명시되지 않았습니다/,
+        name: /본 사업은.*지방재정법/,
       }),
     );
 
@@ -206,7 +263,7 @@ describe('ResultPage document view', () => {
 
     await userEvent.click(
       screen.getByRole('button', {
-        name: /'별첨 3' 참조 표기를 문서 규칙에 맞게 통일했습니다/,
+        name: /\(별첨 3\)에 정리한다/,
       }),
     );
 
@@ -228,14 +285,14 @@ describe('ResultPage document view', () => {
     renderResult();
 
     const issueCard = screen.getByRole('button', {
-      name: /사업 개요에 근거 법령이 명시되지 않았습니다/,
+      name: /본 사업은.*지방재정법/,
     });
     await userEvent.click(issueCard);
     await userEvent.click(screen.getByRole('button', { name: '무시' }));
 
     await userEvent.click(
       screen.getByRole('button', {
-        name: /높음 무시 사업 개요에 근거 법령이 명시되지 않았습니다/,
+        name: /높음 무시 본 사업은.*지방재정법/,
       }),
     );
     expect(screen.getByRole('textbox', { name: '최종 적용 문장' })).toBeDisabled();
@@ -246,7 +303,7 @@ describe('ResultPage document view', () => {
     await userEvent.click(screen.getByRole('button', { name: '무시 해제' }));
     await userEvent.click(
       screen.getByRole('button', {
-        name: /높음 미해결 사업 개요에 근거 법령이 명시되지 않았습니다/,
+        name: /높음 미해결 본 사업은.*지방재정법/,
       }),
     );
     expect(screen.getByRole('textbox', { name: '최종 적용 문장' })).toBeEnabled();

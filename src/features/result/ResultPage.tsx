@@ -45,6 +45,7 @@ export function ResultPage({
   const [finishComplete, setFinishComplete] = useState(false);
   const workspace = useIssueWorkspace(result.issues);
   const filters = useIssueFilters(workspace.issues);
+  const pendingIssues = workspace.issues.filter((issue) => issue.level === 'pending');
   const active = workspace.issues.find((issue) => issue.id === activeId) ?? null;
   const openIssues = workspace.issues.filter((issue) => issue.status === 'open');
   const handled = workspace.issues.length - openIssues.length;
@@ -229,59 +230,55 @@ export function ResultPage({
           </div>
         </section>
 
-        <aside className="issues panel">
-          <div className="issues-head">
-            <h2>이슈 목록</h2>
-            <span>{filters.filteredIssues.length}건</span>
-          </div>
-          <div className="filters">
-            <label>
-              <select
-                value={filters.severity}
-                onChange={(event) =>
-                  filters.setSeverity(event.target.value as typeof filters.severity)
-                }
-              >
-                <option value="all">전체 심각도</option>
-                <option value="high">높음</option>
-                <option value="medium">중간</option>
-                <option value="low">낮음</option>
-                <option value="pending">판단보류</option>
-              </select>
-              <ChevronDown />
-            </label>
-            <label>
-              <select
-                value={filters.status}
-                onChange={(event) => filters.setStatus(event.target.value as typeof filters.status)}
-              >
-                <option value="all">처리 상태</option>
-                <option value="open">미해결</option>
-                <option value="resolved">해결</option>
-                <option value="ignored">무시</option>
-              </select>
-              <ChevronDown />
-            </label>
-          </div>
-          <div className="issue-scroll">
-            {filters.filteredIssues.map((issue) => (
-              <button
-                className={`issue-card ${issue.status}`}
-                key={issue.id}
-                onClick={() => selectIssue(issue)}
-              >
-                <div>
-                  <Status level={issue.level} />
-                  <small>{statusLabel(issue.status)}</small>
-                </div>
-                <strong>{issue.summary}</strong>
-                <span>
-                  {issue.location ?? '문서 전체'}
-                  <b>상세 보기</b>
-                </span>
-              </button>
-            ))}
-          </div>
+        <aside className="issue-column" aria-label="분석 이슈">
+          <section className="pending-issues panel" aria-labelledby="pending-issues-heading">
+            <div className="issues-head">
+              <h2 id="pending-issues-heading">판단 보류</h2>
+              <span>{pendingIssues.length}건</span>
+            </div>
+            <div className="issue-scroll">
+              {pendingIssues.length ? (
+                pendingIssues.map((issue) => (
+                  <IssueCard issue={issue} key={issue.id} onSelect={selectIssue} />
+                ))
+              ) : (
+                <p className="issue-empty">판단 보류 이슈가 없습니다.</p>
+              )}
+            </div>
+          </section>
+
+          <section className="issues panel" aria-labelledby="regular-issues-heading">
+            <div className="issues-head">
+              <h2 id="regular-issues-heading">이슈 목록</h2>
+              <span>{filters.filteredIssues.length}건</span>
+            </div>
+            <div className="filters">
+              <label>
+                <select
+                  aria-label="심각도"
+                  value={filters.severity}
+                  onChange={(event) =>
+                    filters.setSeverity(event.target.value as typeof filters.severity)
+                  }
+                >
+                  <option value="all">전체 심각도</option>
+                  <option value="high">높음</option>
+                  <option value="medium">중간</option>
+                  <option value="low">낮음</option>
+                </select>
+                <ChevronDown />
+              </label>
+            </div>
+            <div className="issue-scroll">
+              {filters.filteredIssues.length ? (
+                filters.filteredIssues.map((issue) => (
+                  <IssueCard issue={issue} key={issue.id} onSelect={selectIssue} />
+                ))
+              ) : (
+                <p className="issue-empty">해당하는 이슈가 없습니다.</p>
+              )}
+            </div>
+          </section>
         </aside>
       </div>
 
@@ -604,6 +601,28 @@ function Metric({ label, value, tone }: { label: string; value: number; tone?: s
       <span>{label}</span>
       <strong className={tone}>{value}</strong>
     </div>
+  );
+}
+function IssueCard({ issue, onSelect }: { issue: Issue; onSelect: (issue: Issue) => void }) {
+  const description =
+    issue.level === 'pending'
+      ? issue.pendingReason?.trim() || issue.explanation?.trim() || issue.summary
+      : issue.suggestionAvailable === false
+        ? issue.summary
+        : issue.suggestion?.trim() || issue.summary;
+
+  return (
+    <button className={`issue-card ${issue.status}`} onClick={() => onSelect(issue)}>
+      <div>
+        <Status level={issue.level} />
+        <small>{statusLabel(issue.status)}</small>
+      </div>
+      <strong>{description}</strong>
+      <span>
+        {issue.location ?? '문서 전체'}
+        <b>상세 보기</b>
+      </span>
+    </button>
   );
 }
 function Status({ level }: { level: Severity }) {
