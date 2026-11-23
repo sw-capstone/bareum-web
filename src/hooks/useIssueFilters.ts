@@ -1,18 +1,16 @@
 import { useMemo, useState } from 'react';
-import type { Issue, IssueStatus, Severity } from '../types';
+import type { Issue, Severity } from '../types';
 
 type Filter<T> = T | 'all';
+type FilterableSeverity = Exclude<Severity, 'pending'>;
 
 export function useIssueFilters(issues: Issue[]) {
-  const [severity, setSeverity] = useState<Filter<Severity>>('all');
-  const [status, setStatus] = useState<Filter<IssueStatus>>('all');
+  const [severity, setSeverity] = useState<Filter<FilterableSeverity>>('all');
   const filteredIssues = useMemo(
     () =>
       issues
         .filter(
-          (issue) =>
-            (severity === 'all' || issue.level === severity) &&
-            (status === 'all' || issue.status === status),
+          (issue) => issue.level !== 'pending' && (severity === 'all' || issue.level === severity),
         )
         .sort((a, b) => {
           if (!a.location && b.location) return -1;
@@ -22,7 +20,7 @@ export function useIssueFilters(issues: Issue[]) {
             (b.locationOrder ?? Number.MAX_SAFE_INTEGER)
           );
         }),
-    [issues, severity, status],
+    [issues, severity],
   );
-  return { severity, setSeverity, status, setStatus, filteredIssues };
+  return { severity, setSeverity, filteredIssues };
 }

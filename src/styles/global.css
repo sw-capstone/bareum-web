@@ -1330,7 +1330,7 @@ svg {
   font-size: 14px;
 }
 .toc,
-.issues {
+.issue-column {
   position: sticky;
   top: 82px;
 }
@@ -1343,7 +1343,7 @@ svg {
   display: none;
 }
 .document,
-.issues {
+.issue-column {
   min-width: 0;
 }
 .toc h2,
@@ -1530,15 +1530,31 @@ svg {
 .legend .low:before {
   background: var(--low);
 }
-.issues {
+.issue-column {
   max-height: calc(100vh - 100px);
   display: flex;
   flex-direction: column;
+  gap: 16px;
+}
+.pending-issues,
+.issues {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.pending-issues {
+  flex: none;
+  max-height: min(35vh, 300px);
+}
+.issues {
+  flex: 1;
+  min-height: 180px;
 }
 .issues-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex: none;
 }
 .issues-head span {
   font-size: 11px;
@@ -1546,13 +1562,12 @@ svg {
 }
 .filters {
   padding: 9px;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 7px;
   border-bottom: 1px solid var(--fog-200);
 }
 .filters label {
   position: relative;
+  display: block;
+  max-width: 160px;
 }
 .filters select {
   width: 100%;
@@ -1576,6 +1591,12 @@ svg {
   overflow: auto;
   display: grid;
   gap: 8px;
+  min-height: 0;
+}
+.issue-empty {
+  padding: 12px 4px;
+  color: var(--ink-500);
+  font-size: 12px;
 }
 .issue-card {
   background: #fff;
@@ -2644,10 +2665,17 @@ h3 {
   .dashboard--toc-open {
     grid-template-columns: minmax(0, 1fr);
   }
-  .issues {
+  .issue-column {
     position: relative;
     top: auto;
     max-height: none;
+  }
+  .pending-issues,
+  .issues {
+    max-height: none;
+  }
+  .issues {
+    min-height: 0;
   }
   .toc {
     position: relative;
@@ -2656,6 +2684,7 @@ h3 {
   }
   .issue-scroll {
     grid-template-columns: repeat(2, 1fr);
+    overflow: visible;
   }
   .metric {
     min-width: 84px;
