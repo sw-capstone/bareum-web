@@ -38,3 +38,27 @@ describe('analysisApi document names', () => {
     expect(result.filename).toBe(filename);
   });
 });
+
+describe('analysisApi mock report stage', () => {
+  it('결과 리포트 생성 단계가 완료되기 전에는 분석을 완료하지 않는다', async () => {
+    const file = new File(['보고서'], '계획서.pdf', { type: 'application/pdf' });
+    const { analysisId } = await analysisApi.start({ file, documentType: '계획 보고서' });
+    let reportWasGenerating = false;
+
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      const progress = await analysisApi.getProgress(analysisId);
+      const reportStage = progress.checks?.find((check) => check.id === 'report-generation');
+      if (reportStage?.status === 'processing') {
+        reportWasGenerating = true;
+        expect(progress.status).toBe('processing');
+      }
+      if (progress.status === 'completed') {
+        expect(reportWasGenerating).toBe(true);
+        expect(reportStage?.status).toBe('completed');
+        return;
+      }
+    }
+
+    throw new Error('Mock 분석이 완료되지 않았습니다.');
+  });
+});

@@ -5,6 +5,10 @@ import type { AnalysisCheck, AnalysisProgress } from '../../services/contracts';
 
 const defaultCheckLabels = ['구조', '규정', '표현', '정합성', '수정안', '점수'];
 
+function isReportStage(check: AnalysisCheck) {
+  return check.id === 'report-generation' || check.label === '결과 리포트 생성';
+}
+
 function fallbackChecks(step: string, progress: number): AnalysisCheck[] {
   const matchingIndex = defaultCheckLabels.findIndex((label) => step.includes(label));
   const activeIndex = matchingIndex >= 0 ? matchingIndex : Math.min(5, Math.floor(progress / 17));
@@ -48,6 +52,9 @@ export function AnalysisPage({
     : fallbackChecks(analysis.step, analysis.progress);
   const currentCheck = checks.find((check) => check.status === 'processing');
   const completedCount = checks.filter((check) => check.status === 'completed').length;
+  const reportStage = checks.find(isReportStage);
+  const isGeneratingReport = Boolean(currentCheck && isReportStage(currentCheck));
+  const isComplete = analysis.status === 'completed';
   const openCancelDialog = () => {
     setCancelOpen(true);
     onCancelDialogChange?.(true);
@@ -82,25 +89,37 @@ export function AnalysisPage({
             <span className="analysis-file">
               <FileText />
             </span>
-            <h1>문서를 분석하고 있습니다</h1>
+            <h1>
+              {isComplete
+                ? '분석이 완료되었습니다'
+                : isGeneratingReport
+                  ? '결과 리포트를 생성하고 있습니다'
+                  : '문서를 분석하고 있습니다'}
+            </h1>
             {(analysis.title || analysis.filename) && (
               <strong className="analysis-document-name">
                 {analysis.title ?? analysis.filename}
               </strong>
             )}
-            <p>새로고침하거나 다른 화면으로 이동해도 서버의 분석은 계속됩니다.</p>
+            <p>새로고침하거나 다른 화면으로 이동해도 작업은 계속됩니다.</p>
             <div
               className="manuscript-progress"
               role="progressbar"
-              aria-label="문서 분석 진행률"
+              aria-label="분석 및 결과 리포트 생성 진행률"
               aria-valuemin={0}
               aria-valuemax={100}
               aria-valuenow={analysis.progress}
             >
               <div style={{ width: `${analysis.progress}%` }} />
-              <span>{currentCheck ? `${currentCheck.label} 검사 중` : analysis.step}</span>
+              <span>
+                {currentCheck
+                  ? isGeneratingReport
+                    ? '결과 리포트 생성 중'
+                    : `${currentCheck.label} 검사 중`
+                  : analysis.step}
+              </span>
             </div>
-            <ol className="analysis-steps analysis-steps--six">
+            <ol className="analysis-steps analysis-steps--stages">
               {checks.map((check, index) => (
                 <li
                   className={check.status}
@@ -116,9 +135,12 @@ export function AnalysisPage({
                   <div>
                     <strong>{check.label}</strong>
                     <small>
-                      {check.status === 'completed' && '검사 완료'}
-                      {check.status === 'failed' && '검사 실패'}
-                      {check.status === 'processing' && '검사 중'}
+                      {check.status === 'completed' &&
+                        (isReportStage(check) ? '생성 완료' : '검사 완료')}
+                      {check.status === 'failed' &&
+                        (isReportStage(check) ? '생성 실패' : '검사 실패')}
+                      {check.status === 'processing' &&
+                        (isReportStage(check) ? '생성 중' : '검사 중')}
                       {check.status === 'pending' && '대기'}
                     </small>
                   </div>
@@ -126,13 +148,21 @@ export function AnalysisPage({
               ))}
             </ol>
             <div className="analysis-current-status" aria-live="polite">
-              <LoaderCircle className="spinner" />
+              {isComplete ? <Check /> : <LoaderCircle className="spinner" />}
               <div>
                 <strong>
-                  {currentCheck ? `${currentCheck.label} 검사를 수행하고 있습니다` : analysis.step}
+                  {isComplete
+                    ? reportStage?.status === 'completed'
+                      ? '분석과 결과 리포트 생성이 완료되었습니다'
+                      : '분석이 완료되었습니다'
+                    : isGeneratingReport
+                      ? '결과 리포트를 생성하고 있습니다'
+                      : currentCheck
+                        ? `${currentCheck.label} 검사를 수행하고 있습니다`
+                        : analysis.step}
                 </strong>
                 <span>
-                  {completedCount} / {checks.length}개 검사 완료
+                  {completedCount} / {checks.length}개 단계 완료
                 </span>
               </div>
             </div>
@@ -208,24 +238,37 @@ export function FailedPage({
 }) {
   const isPartial = analysis.status === 'partial_failed';
   const failures = analysis.checks?.filter((check) => check.status === 'failed') ?? [];
+  const reportFailed = failures.some(isReportStage);
 
   return (
     <main className="analysis-page failure-page">
       <span className="analysis-file failed">{isPartial ? <AlertTriangle /> : <X />}</span>
-      <p className="eyebrow">{isPartial ? '분석 부분 실패' : '분석 전체 실패'}</p>
-      <h1>{isPartial ? '일부 검사를 완료하지 못했습니다' : '분석에 실패했습니다'}</h1>
+      <p className="eyebrow">
+        {reportFailed ? '결과 리포트 생성 실패' : isPartial ? '분석 부분 실패' : '분석 전체 실패'}
+      </p>
+      <h1>
+        {reportFailed
+          ? '결과 리포트를 생성하지 못했습니다'
+          : isPartial
+            ? '일부 검사를 완료하지 못했습니다'
+            : '분석에 실패했습니다'}
+      </h1>
       <p>
-        {isPartial
-          ? '완료된 검사 결과는 확인할 수 있습니다. 실패한 항목과 사유를 확인해 주세요.'
-          : '전체 검사에 실패하여 분석 결과를 제공할 수 없습니다.'}
+        {reportFailed
+          ? '리포트 생성이 완료되지 않아 결과를 열 수 없습니다. 실패 사유를 확인하고 다시 시도해 주세요.'
+          : isPartial
+            ? '완료된 검사 결과는 확인할 수 있습니다. 실패한 항목과 사유를 확인해 주세요.'
+            : '전체 검사에 실패하여 분석 결과를 제공할 수 없습니다.'}
       </p>
       <span className="failure-document-type">{analysis.documentType ?? '계획 보고서'}</span>
 
       <div className="failure-card">
         <strong>
-          {isPartial
-            ? `${failures.length || 1}개 검사 영역을 완료하지 못했습니다.`
-            : (analysis.errorMessage ?? '전체 검사에 실패하여 분석 결과를 제공할 수 없습니다.')}
+          {reportFailed
+            ? (analysis.errorMessage ?? '결과 리포트를 생성하지 못했습니다.')
+            : isPartial
+              ? `${failures.length || 1}개 검사 영역을 완료하지 못했습니다.`
+              : (analysis.errorMessage ?? '전체 검사에 실패하여 분석 결과를 제공할 수 없습니다.')}
         </strong>
         <dl>
           {(failures.length
@@ -256,13 +299,13 @@ export function FailedPage({
         </dl>
       </div>
       <div className="button-row">
-        {isPartial ? (
+        {isPartial && !reportFailed ? (
           <Button variant="secondary" onClick={onPartialResult}>
             부분 결과 보기
           </Button>
         ) : (
           <Button variant="secondary" onClick={onCancel}>
-            분석 취소
+            {reportFailed ? '업로드로 돌아가기' : '분석 취소'}
           </Button>
         )}
         <Button onClick={onRetry} disabled={retryPending}>

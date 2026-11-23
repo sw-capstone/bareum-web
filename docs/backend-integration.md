@@ -109,6 +109,8 @@ Google 신규 가입의 이메일·이름은 서버가 ID Token에서 확인한 
 
 `status`는 `queued | processing | paused | completed | partial_failed | failed | canceled` 중 하나입니다. `checks`는 서버에서 실제로 접수·완료된 순서대로 전달하며 각 항목의 `status`는 `pending | processing | completed | failed`입니다. 실패 항목에는 `errorCode`, `errorMessage`, `failedAt`을 선택적으로 포함합니다.
 
+화면 개발용 Mock은 기존 6개 검사 뒤에 `{ "id": "report-generation", "label": "결과 리포트 생성", "status": "processing" }` 단계를 추가합니다. 이 단계가 완료되기 전에는 전체 `status`를 `completed`로 바꾸지 않습니다. 실제 서버 응답에서는 전달된 단계만 표시하며, 리포트 생성 단계·완료 상태·오류 코드가 공개 API로 확정된 뒤 연동합니다. PDF 변환과 결과 화면의 PDF 뷰어는 이 Mock 단계에 포함하지 않으며, 현재 결과 대시보드의 JSON 기반 문서 화면을 유지합니다.
+
 ### 분석 취소 및 재분석
 
 - `POST /analyses/:id/cancel`: 진행 중인 분석을 취소합니다. 이미 완료된 경우 `ANALYSIS_ALREADY_COMPLETED` 오류를 반환합니다.
