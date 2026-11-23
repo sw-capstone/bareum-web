@@ -1311,10 +1311,13 @@ svg {
 }
 .dashboard {
   display: grid;
-  grid-template-columns: 230px minmax(480px, 1fr) 310px;
+  grid-template-columns: minmax(0, 6fr) minmax(280px, 4fr);
   gap: 16px;
   margin-top: 18px;
   align-items: start;
+}
+.dashboard--toc-open {
+  grid-template-columns: 220px minmax(0, 6fr) minmax(280px, 4fr);
 }
 .panel {
   background: #fff;
@@ -1330,6 +1333,18 @@ svg {
 .issues {
   position: sticky;
   top: 82px;
+}
+.toc {
+  min-width: 0;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+}
+.toc[hidden] {
+  display: none;
+}
+.document,
+.issues {
+  min-width: 0;
 }
 .toc h2,
 .issues-head {
@@ -1364,20 +1379,44 @@ svg {
   color: var(--high);
 }
 .document-bar {
-  height: 48px;
+  min-height: 48px;
   padding: 0 14px;
   border-bottom: 1px solid var(--fog-200);
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 10px;
   font-size: 11px;
   color: var(--ink-500);
 }
-.document-bar > div {
+.document-bar__title {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.document-bar .document-toc-toggle {
+  width: auto;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 8px;
+  border: 1px solid var(--fog-200);
+  border-radius: 6px;
+  color: var(--navy-700);
+  white-space: nowrap;
+}
+.document-toc-toggle:hover,
+.document-toc-toggle.is-open {
+  background: var(--navy-50);
+}
+.document-zoom {
   display: flex;
   border: 1px solid var(--fog-200);
   border-radius: 6px;
   align-items: center;
+  flex: none;
 }
 .document-bar button {
   width: 28px;
@@ -2601,18 +2640,19 @@ h3 {
 }
 
 @media (max-width: 1100px) {
-  .dashboard {
-    grid-template-columns: 190px 1fr;
+  .dashboard,
+  .dashboard--toc-open {
+    grid-template-columns: minmax(0, 1fr);
   }
   .issues {
     position: relative;
     top: auto;
-    grid-column: 1/-1;
     max-height: none;
   }
   .toc {
     position: relative;
     top: auto;
+    max-height: 300px;
   }
   .issue-scroll {
     grid-template-columns: repeat(2, 1fr);
@@ -2760,13 +2800,6 @@ h3 {
   }
   .dashboard {
     grid-template-columns: 1fr;
-  }
-  .toc {
-    position: relative;
-    top: auto;
-  }
-  .document {
-    grid-row: 2;
   }
   .paper-wrap {
     height: 600px;

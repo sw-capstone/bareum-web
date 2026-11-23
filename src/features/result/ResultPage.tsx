@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type RefObject } from 'react';
 import {
   ChevronDown,
   ExternalLink,
@@ -6,6 +6,7 @@ import {
   Info,
   Maximize2,
   Minus,
+  ListTree,
   Plus,
   RefreshCw,
   X,
@@ -35,6 +36,8 @@ export function ResultPage({
 }) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [section, setSection] = useState(result.sections[0]?.id ?? '');
+  const [tocOpen, setTocOpen] = useState(false);
+  const documentScrollRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(100);
   const [fullscreen, setFullscreen] = useState(false);
   const [finishOpen, setFinishOpen] = useState(false);
@@ -74,6 +77,28 @@ export function ResultPage({
   function selectIssue(issue: Issue) {
     setActiveId(issue.id);
     if (issue.sectionId) setSection(issue.sectionId);
+  }
+
+  function goToSection(sectionId: string) {
+    setSection(sectionId);
+    const scroller = documentScrollRef.current;
+    if (!scroller) return;
+    if (!sectionId) {
+      scroller.scrollTo?.({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    const target = Array.from(scroller.querySelectorAll<HTMLElement>('.paper section')).find(
+      (item) => item.id === sectionId,
+    );
+    if (!target) return;
+    scroller.scrollTo?.({
+      top:
+        scroller.scrollTop +
+        target.getBoundingClientRect().top -
+        scroller.getBoundingClientRect().top -
+        26,
+      behavior: 'smooth',
+    });
   }
 
   function renderedSegment(text: string, issueId?: string) {
@@ -126,11 +151,11 @@ export function ResultPage({
         </div>
       </section>
 
-      <div className="dashboard">
-        <aside className="toc panel">
+      <div className={`dashboard${tocOpen ? ' dashboard--toc-open' : ''}`}>
+        <aside className="toc panel" id="result-toc" aria-label="문서 목차" hidden={!tocOpen}>
           <h2>문서 목차</h2>
           {workspace.issues.some((issue) => !issue.location) && (
-            <button className={!section ? 'active' : ''} onClick={() => setSection('')}>
+            <button className={!section ? 'active' : ''} onClick={() => goToSection('')}>
               <span>문서 전체 이슈</span>
               <b>
                 {
@@ -148,10 +173,7 @@ export function ResultPage({
               <button
                 className={section === item.id ? 'active' : ''}
                 key={item.id}
-                onClick={() => {
-                  setSection(item.id);
-                  document.getElementById(item.id)?.scrollIntoView({ behavior: 'smooth' });
-                }}
+                onClick={() => goToSection(item.id)}
               >
                 <span>
                   {item.number}. {item.title}
@@ -164,10 +186,21 @@ export function ResultPage({
 
         <section className="document panel">
           <div className="document-bar">
-            <span>
+            <button
+              type="button"
+              className={`document-toc-toggle${tocOpen ? ' is-open' : ''}`}
+              aria-label={tocOpen ? '문서 목차 닫기' : '문서 목차 열기'}
+              aria-expanded={tocOpen}
+              aria-controls="result-toc"
+              onClick={() => setTocOpen((current) => !current)}
+            >
+              <ListTree aria-hidden="true" />
+              <span>목차</span>
+            </button>
+            <span className="document-bar__title">
               <strong>{result.title}</strong> · {result.filename}
             </span>
-            <div>
+            <div className="document-zoom">
               <button aria-label="축소" onClick={() => setZoom(Math.max(80, zoom - 10))}>
                 <Minus />
               </button>
@@ -186,6 +219,7 @@ export function ResultPage({
             zoom={zoom}
             onIssue={selectIssue}
             renderText={renderedSegment}
+            scrollContainerRef={documentScrollRef}
           />
           <div className="legend">
             <span className="high">높음</span>
@@ -509,6 +543,7 @@ function DocumentPaper({
   renderText,
   zoom = 100,
   fullscreen = false,
+  scrollContainerRef,
 }: {
   result: AnalysisResult;
   issues: Issue[];
@@ -516,9 +551,10 @@ function DocumentPaper({
   renderText: (text: string, issueId?: string) => string;
   zoom?: number;
   fullscreen?: boolean;
+  scrollContainerRef?: RefObject<HTMLDivElement | null>;
 }) {
   return (
-    <div className={fullscreen ? 'fullscreen-paper-wrap' : 'paper-wrap'}>
+    <div className={fullscreen ? 'fullscreen-paper-wrap' : 'paper-wrap'} ref={scrollContainerRef}>
       <article
         className={`paper ${fullscreen ? 'fullscreen-paper' : ''}`}
         style={

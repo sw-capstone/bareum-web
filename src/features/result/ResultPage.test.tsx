@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { sampleResult } from '../../mocks/analysis';
@@ -40,9 +40,46 @@ describe('ResultPage document view', () => {
 
     expect(screen.queryByText('종합 점수')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /수정 끝내기/ })).toBeVisible();
-    expect(screen.getByRole('heading', { name: '문서 목차' })).toBeVisible();
+    expect(screen.queryByRole('heading', { name: '문서 목차' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '문서 목차 열기' })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    );
+    expect(document.querySelector('.dashboard')).not.toHaveClass('dashboard--toc-open');
     expect(screen.getByRole('heading', { name: '이슈 목록' })).toBeVisible();
     expect(screen.queryByRole('dialog', { name: '문서 전체보기' })).not.toBeInTheDocument();
+  });
+
+  it('문서 목차를 열고 닫으며 선택한 절로 문서 내부를 이동한다', async () => {
+    renderResult();
+    const scroller = document.querySelector<HTMLDivElement>('.paper-wrap');
+    expect(scroller).not.toBeNull();
+    const scrollTo = vi.fn();
+    if (scroller) scroller.scrollTo = scrollTo;
+
+    const openButton = screen.getByRole('button', { name: '문서 목차 열기' });
+    expect(openButton).toHaveAttribute('aria-controls', 'result-toc');
+    await userEvent.click(openButton);
+
+    expect(screen.getByRole('heading', { name: '문서 목차' })).toBeVisible();
+    expect(screen.getByRole('button', { name: '문서 목차 닫기' })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    );
+    expect(document.querySelector('.dashboard')).toHaveClass('dashboard--toc-open');
+
+    await userEvent.click(
+      within(screen.getByRole('complementary', { name: '문서 목차' })).getByRole('button', {
+        name: /2\. 추진 배경 및 필요성/,
+      }),
+    );
+    expect(scrollTo).toHaveBeenCalledWith(
+      expect.objectContaining({ behavior: 'smooth', top: expect.any(Number) }),
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: '문서 목차 닫기' }));
+    expect(screen.queryByRole('heading', { name: '문서 목차' })).not.toBeInTheDocument();
+    expect(document.querySelector('.dashboard')).not.toHaveClass('dashboard--toc-open');
   });
 
   it('문서 전체보기 버튼을 누른 뒤에만 전체 문서를 연다', async () => {
