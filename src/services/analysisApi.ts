@@ -27,12 +27,12 @@ let mockProgress = 0;
 let mockPaused = false;
 let mockTitle = sampleResult.title;
 let mockFilename = sampleResult.filename;
-const mockCheckLabels = ['구조', '규정', '표현', '정합성', '수정안', '점수'];
+const mockCheckLabels = ['구조', '규정', '표현', '정합성', '수정안', '점수', '결과 리포트 생성'];
 
 function createMockChecks(progress: number) {
   const completedCount = Math.floor((progress / 100) * mockCheckLabels.length);
   return mockCheckLabels.map((label, index) => ({
-    id: label,
+    id: label === '결과 리포트 생성' ? 'report-generation' : label,
     label,
     status: (index < completedCount
       ? 'completed'
@@ -75,7 +75,7 @@ export const analysisApi = {
           checks,
         };
       }
-      mockProgress = Math.min(100, mockProgress + 12);
+      mockProgress = Math.min(100, mockProgress + (mockProgress >= 84 ? 4 : 12));
       const checks = createMockChecks(mockProgress);
       return {
         status: mockProgress >= 100 ? 'completed' : 'processing',

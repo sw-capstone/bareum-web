@@ -2395,8 +2395,8 @@ h3 {
   border-top: 1px solid var(--fog-300);
   border-bottom: 1px solid var(--fog-300);
 }
-.analysis-steps--six {
-  grid-template-columns: repeat(6, 1fr);
+.analysis-steps--stages {
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
 }
 .analysis-steps li {
   min-height: 105px;
@@ -2635,14 +2635,14 @@ h3 {
   }
 }
 @media (max-width: 900px) {
-  .analysis-steps--six {
-    grid-template-columns: repeat(3, 1fr);
+  .analysis-steps--stages {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
-  .analysis-steps--six li:nth-child(3) {
+  .analysis-steps--stages li:nth-child(4n) {
     border-right: 0;
   }
-  .analysis-steps--six li:nth-child(-n + 3) {
-    border-bottom: 1px solid var(--fog-200);
+  .analysis-steps--stages li:nth-child(n + 5) {
+    border-top: 1px solid var(--fog-200);
   }
 }
 @media (max-width: 720px) {
@@ -2706,11 +2706,14 @@ h3 {
   .analysis-steps {
     grid-template-columns: 1fr;
   }
-  .analysis-steps--six {
+  .analysis-steps--stages {
     grid-template-columns: 1fr;
   }
-  .analysis-steps--six li:nth-child(3) {
+  .analysis-steps--stages li:nth-child(4n) {
     border-right: 0;
+  }
+  .analysis-steps--stages li:nth-child(n + 5) {
+    border-top: 0;
   }
   .analysis-steps li {
     min-height: 62px;
