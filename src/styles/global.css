@@ -1311,13 +1311,13 @@ svg {
 }
 .dashboard {
   display: grid;
-  grid-template-columns: minmax(0, 7fr) minmax(280px, 3fr);
+  grid-template-columns: minmax(0, 6fr) minmax(280px, 4fr);
   gap: 16px;
   margin-top: 18px;
   align-items: start;
 }
 .dashboard--toc-open {
-  grid-template-columns: 220px minmax(0, 7fr) minmax(280px, 3fr);
+  grid-template-columns: 220px minmax(0, 6fr) minmax(280px, 4fr);
 }
 .panel {
   background: #fff;
