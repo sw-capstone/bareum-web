@@ -1,50 +1,36 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
 import type { AnalysisRequest } from '../services/analysisApi';
 
-export const MAX_TEXT_LENGTH = 60_000;
-export const MAX_TITLE_LENGTH = 255;
 export const MAX_FILE_SIZE = 20 * 1024 * 1024;
 const SUPPORTED_EXTENSIONS = ['pdf', 'docx', 'hwpx'];
 
-type Tab = 'file' | 'text';
 export type FileProcessingStatus = 'idle' | 'processing' | 'completed' | 'failed';
 
 interface UploadState {
-  tab: Tab;
   file: File | null;
   fileStatus: FileProcessingStatus;
   fileError: string | null;
-  text: string;
-  title: string;
   documentType: string;
   isDragging: boolean;
 }
 
 type Action =
-  | { type: 'tab'; value: Tab }
   | { type: 'file'; value: File | null }
   | { type: 'fileStatus'; value: FileProcessingStatus }
   | { type: 'fileError'; value: string | null }
-  | { type: 'text'; value: string }
-  | { type: 'title'; value: string }
   | { type: 'documentType'; value: string }
   | { type: 'drag'; value: boolean };
 
 const initialState: UploadState = {
-  tab: 'file',
   file: null,
   fileStatus: 'idle',
   fileError: null,
-  text: '',
-  title: '',
   documentType: '계획 보고서',
   isDragging: false,
 };
 
 function reducer(state: UploadState, action: Action): UploadState {
   switch (action.type) {
-    case 'tab':
-      return { ...state, tab: action.value };
     case 'file':
       return {
         ...state,
@@ -56,10 +42,6 @@ function reducer(state: UploadState, action: Action): UploadState {
       return { ...state, fileStatus: action.value };
     case 'fileError':
       return { ...state, fileError: action.value, fileStatus: action.value ? 'failed' : 'idle' };
-    case 'text':
-      return { ...state, text: action.value.slice(0, MAX_TEXT_LENGTH) };
-    case 'title':
-      return { ...state, title: action.value.slice(0, MAX_TITLE_LENGTH) };
     case 'documentType':
       return { ...state, documentType: action.value };
     case 'drag':
@@ -79,10 +61,9 @@ export function validateFile(file: File): string | null {
 }
 
 export function createAnalysisRequest(state: UploadState): AnalysisRequest {
+  if (!state.file) throw new Error('분석할 파일을 선택해 주세요.');
   return {
-    file: state.tab === 'file' ? (state.file ?? undefined) : undefined,
-    text: state.tab === 'text' ? state.text.trim() || undefined : undefined,
-    title: state.tab === 'text' ? state.title.trim() || undefined : undefined,
+    file: state.file,
     documentType: state.documentType,
   };
 }
@@ -123,16 +104,8 @@ export function useDocumentUpload() {
   }, []);
 
   const isValid = useMemo(
-    () =>
-      Boolean(
-        state.tab === 'file'
-          ? state.file && state.fileStatus === 'completed'
-          : state.title.trim() &&
-              state.title.length <= MAX_TITLE_LENGTH &&
-              state.text.trim() &&
-              state.text.length <= MAX_TEXT_LENGTH,
-      ),
-    [state.file, state.fileStatus, state.tab, state.text, state.title],
+    () => Boolean(state.file && state.fileStatus === 'completed'),
+    [state.file, state.fileStatus],
   );
 
   const createRequest = useCallback(() => createAnalysisRequest(state), [state]);

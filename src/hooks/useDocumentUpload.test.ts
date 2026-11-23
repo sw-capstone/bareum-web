@@ -1,40 +1,13 @@
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import {
-  MAX_FILE_SIZE,
-  MAX_TEXT_LENGTH,
-  MAX_TITLE_LENGTH,
-  useDocumentUpload,
-  validateFile,
-} from './useDocumentUpload';
+import { MAX_FILE_SIZE, useDocumentUpload, validateFile } from './useDocumentUpload';
 describe('useDocumentUpload', () => {
-  it('현재 보이는 파일 탭의 입력만 분석 요청에 포함한다', () => {
+  it('업로드한 파일과 문서 유형만 분석 요청에 포함한다', () => {
     const { result } = renderHook(() => useDocumentUpload());
     const file = new File(['report'], 'report.pdf', { type: 'application/pdf' });
     act(() => result.current.dispatch({ type: 'file', value: file }));
-    act(() => result.current.dispatch({ type: 'text', value: '숨겨진 직접 입력 내용' }));
-
-    expect(result.current.createRequest()).toMatchObject({ file, text: undefined });
-  });
-  it('현재 보이는 직접 입력 탭의 내용만 분석 요청에 포함한다', () => {
-    const { result } = renderHook(() => useDocumentUpload());
-    const file = new File(['report'], 'report.pdf', { type: 'application/pdf' });
-    act(() => result.current.dispatch({ type: 'file', value: file }));
-    act(() => result.current.dispatch({ type: 'text', value: '  현재 보이는 내용  ' }));
-    act(() => result.current.dispatch({ type: 'title', value: '  직접 입력 보고서  ' }));
-    act(() => result.current.dispatch({ type: 'tab', value: 'text' }));
-
-    expect(result.current.createRequest()).toMatchObject({
-      file: undefined,
-      text: '현재 보이는 내용',
-      title: '직접 입력 보고서',
-    });
-  });
-  it('숨겨진 탭에만 값이 있으면 분석을 시작할 수 없다', () => {
-    const { result } = renderHook(() => useDocumentUpload());
-    act(() => result.current.dispatch({ type: 'text', value: '숨겨진 직접 입력 내용' }));
-
-    expect(result.current.isValid).toBe(false);
+    act(() => result.current.dispatch({ type: 'documentType', value: '결과 보고서' }));
+    expect(result.current.createRequest()).toEqual({ file, documentType: '결과 보고서' });
   });
   it('파일 처리가 완료되기 전에는 분석을 시작할 수 없다', () => {
     const { result } = renderHook(() => useDocumentUpload());
@@ -52,27 +25,5 @@ describe('useDocumentUpload', () => {
     expect(validateFile(new File([new Uint8Array(MAX_FILE_SIZE + 1)], 'report.pdf'))).toContain(
       '20MB',
     );
-  });
-  it('직접 입력은 60,000자를 넘겨 저장하지 않는다', () => {
-    const { result } = renderHook(() => useDocumentUpload());
-    act(() => result.current.dispatch({ type: 'text', value: '가'.repeat(MAX_TEXT_LENGTH + 10) }));
-    expect(result.current.state.text).toHaveLength(MAX_TEXT_LENGTH);
-  });
-  it('직접 입력 보고서 이름은 필수이며 255자로 제한한다', () => {
-    const { result } = renderHook(() => useDocumentUpload());
-    act(() => result.current.dispatch({ type: 'tab', value: 'text' }));
-    act(() => result.current.dispatch({ type: 'text', value: '보고서 내용' }));
-    act(() => result.current.dispatch({ type: 'title', value: '   ' }));
-    expect(result.current.isValid).toBe(false);
-
-    act(() =>
-      result.current.dispatch({
-        type: 'title',
-        value: ` 보고서 ${'가'.repeat(MAX_TITLE_LENGTH)} `,
-      }),
-    );
-    expect(result.current.state.title).toHaveLength(MAX_TITLE_LENGTH);
-    expect(result.current.createRequest().title).toBe(result.current.state.title.trim());
-    expect(result.current.isValid).toBe(true);
   });
 });

@@ -3,8 +3,9 @@ import { analysisApi } from './analysisApi';
 
 describe('analysisApi mock pause/resume', () => {
   it('취소 확인 중에는 진행률을 멈추고 닫으면 다시 진행한다', async () => {
+    const file = new File(['분석할 보고서'], 'report.pdf', { type: 'application/pdf' });
     const { analysisId } = await analysisApi.start({
-      text: '분석할 보고서',
+      file,
       documentType: '계획 보고서',
     });
     const beforePause = await analysisApi.getProgress(analysisId);

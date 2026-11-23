@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode } from 'react';
+import { useRef, type ReactNode } from 'react';
 import {
   AlertCircle,
   CheckCircle2,
@@ -9,11 +9,7 @@ import {
   UploadCloud,
 } from 'lucide-react';
 import { Button } from '../../components/ui';
-import {
-  MAX_TEXT_LENGTH,
-  MAX_TITLE_LENGTH,
-  useDocumentUpload,
-} from '../../hooks/useDocumentUpload';
+import { useDocumentUpload } from '../../hooks/useDocumentUpload';
 import type { AnalysisRequest } from '../../services/analysisApi';
 
 export function UploadPage({
@@ -27,9 +23,6 @@ export function UploadPage({
 }) {
   const { state, dispatch, selectFile, removeFile, isValid, createRequest } = useDocumentUpload();
   const input = useRef<HTMLInputElement>(null);
-  const [titleTouched, setTitleTouched] = useState(false);
-  const isTextLimit = state.text.length >= MAX_TEXT_LENGTH;
-  const isTitleInvalid = titleTouched && !state.title.trim();
   const isProcessing = state.fileStatus === 'processing';
   const analyze = () => isValid && onAnalyze(createRequest());
 
@@ -37,139 +30,67 @@ export function UploadPage({
     <main className="page upload-page">
       <div className="page-heading">
         <h1>공공보고서 검토</h1>
-        <p>검토할 문서를 올리거나 내용을 직접 입력해 주세요.</p>
+        <p>검토할 보고서 파일을 올려주세요.</p>
       </div>
       <section className="upload-card">
-        <div className="tabs" role="tablist" aria-label="문서 입력 방식">
-          <button
-            role="tab"
-            aria-selected={state.tab === 'file'}
-            className={state.tab === 'file' ? 'active' : ''}
-            onClick={() => dispatch({ type: 'tab', value: 'file' })}
-          >
-            파일 업로드
-          </button>
-          <button
-            role="tab"
-            aria-selected={state.tab === 'text'}
-            className={state.tab === 'text' ? 'active' : ''}
-            onClick={() => dispatch({ type: 'tab', value: 'text' })}
-          >
-            직접 입력
-          </button>
-        </div>
-
-        {state.tab === 'file' ? (
-          !state.file ? (
-            <>
-              <input
-                ref={input}
-                hidden
-                type="file"
-                accept=".hwpx,.docx,.pdf"
-                onChange={(event) => {
-                  selectFile(event.target.files);
-                  event.target.value = '';
-                }}
-              />
-              <button
-                type="button"
-                className={`dropzone ${state.isDragging ? 'drag' : ''}`}
-                onClick={() => input.current?.click()}
-                onDragOver={(event) => event.preventDefault()}
-                onDragEnter={() => dispatch({ type: 'drag', value: true })}
-                onDragLeave={() => dispatch({ type: 'drag', value: false })}
-                onDrop={(event) => {
-                  event.preventDefault();
-                  dispatch({ type: 'drag', value: false });
-                  selectFile(event.dataTransfer.files);
-                }}
-              >
-                <span className="drop-icon">
-                  <UploadCloud />
-                </span>
-                <h2>파일을 이곳에 올려주세요</h2>
-                <p>HWPX, DOCX, PDF · 최대 20MB · 최대 60페이지</p>
-                <span className="dropzone-hint">영역을 선택해 파일 찾기</span>
-              </button>
-              {state.fileError && (
-                <NoticeCard title="파일 업로드에 실패했습니다." tone="error">
-                  <p>{state.fileError}</p>
-                  <Button variant="secondary" size="sm" onClick={() => input.current?.click()}>
-                    <RotateCcw /> 다시 업로드
-                  </Button>
-                </NoticeCard>
-              )}
-            </>
-          ) : (
-            <div className={`uploaded-file ${isProcessing ? 'is-processing' : ''}`}>
-              <span className="file-icon">
-                <FileText />
+        {!state.file ? (
+          <>
+            <input
+              ref={input}
+              hidden
+              type="file"
+              accept=".hwpx,.docx,.pdf"
+              onChange={(event) => {
+                selectFile(event.target.files);
+                event.target.value = '';
+              }}
+            />
+            <button
+              type="button"
+              className={`dropzone ${state.isDragging ? 'drag' : ''}`}
+              onClick={() => input.current?.click()}
+              onDragOver={(event) => event.preventDefault()}
+              onDragEnter={() => dispatch({ type: 'drag', value: true })}
+              onDragLeave={() => dispatch({ type: 'drag', value: false })}
+              onDrop={(event) => {
+                event.preventDefault();
+                dispatch({ type: 'drag', value: false });
+                selectFile(event.dataTransfer.files);
+              }}
+            >
+              <span className="drop-icon">
+                <UploadCloud />
               </span>
-              <div>
-                <strong>{state.file.name}</strong>
-                <p className={isProcessing ? 'file-status processing' : 'file-status completed'}>
-                  {isProcessing ? <LoaderCircle className="spinner" /> : <CheckCircle2 />}
-                  {isProcessing ? '문서 업로드 중' : '업로드 완료'} <span>·</span>{' '}
-                  {(state.file.size / 1024 / 1024).toFixed(2)}MB
-                </p>
-                {isProcessing && <small>문서 내용을 읽고 있습니다. 잠시만 기다려 주세요.</small>}
-              </div>
-              <Button variant="tertiary" onClick={removeFile} disabled={isProcessing}>
-                <Trash2 /> 삭제
-              </Button>
-            </div>
-          )
+              <h2>파일을 이곳에 올려주세요</h2>
+              <p>HWPX, DOCX, PDF · 최대 20MB · 최대 60페이지</p>
+              <span className="dropzone-hint">영역을 선택해 파일 찾기</span>
+            </button>
+            {state.fileError && (
+              <NoticeCard title="파일 업로드에 실패했습니다." tone="error">
+                <p>{state.fileError}</p>
+                <Button variant="secondary" size="sm" onClick={() => input.current?.click()}>
+                  <RotateCcw /> 다시 업로드
+                </Button>
+              </NoticeCard>
+            )}
+          </>
         ) : (
-          <div className="text-entry">
-            <label className={`report-title-field ${isTitleInvalid ? 'is-invalid' : ''}`}>
-              <span>
-                보고서 이름 <b>필수</b>
-              </span>
-              <div>
-                <input
-                  type="text"
-                  value={state.title}
-                  maxLength={MAX_TITLE_LENGTH}
-                  placeholder="보고서 이름을 입력해 주세요."
-                  aria-invalid={isTitleInvalid}
-                  aria-describedby="report-title-help"
-                  onBlur={() => setTitleTouched(true)}
-                  onChange={(event) => dispatch({ type: 'title', value: event.target.value })}
-                />
-                <small>
-                  {state.title.length} / {MAX_TITLE_LENGTH}자
-                </small>
-              </div>
-              <p id="report-title-help">
-                {isTitleInvalid
-                  ? '공백이 아닌 보고서 이름을 입력해 주세요.'
-                  : '분석 진행, 기록, 결과 화면에 표시되는 이름입니다.'}
+          <div className={`uploaded-file ${isProcessing ? 'is-processing' : ''}`}>
+            <span className="file-icon">
+              <FileText />
+            </span>
+            <div>
+              <strong>{state.file.name}</strong>
+              <p className={isProcessing ? 'file-status processing' : 'file-status completed'}>
+                {isProcessing ? <LoaderCircle className="spinner" /> : <CheckCircle2 />}
+                {isProcessing ? '문서 업로드 중' : '업로드 완료'} <span>·</span>{' '}
+                {(state.file.size / 1024 / 1024).toFixed(2)}MB
               </p>
-            </label>
-            <div className="editor">
-              <div className="editor-toolbar">
-                <strong>B</strong>
-                <em>I</em>
-                <span>제목</span>
-                <span>문단</span>
-                <span>번호</span>
-                <span>글머리표</span>
-                <small className={isTextLimit ? 'limit-reached' : ''}>
-                  {state.text.length.toLocaleString()} / {MAX_TEXT_LENGTH.toLocaleString()}자
-                </small>
-              </div>
-              <textarea
-                value={state.text}
-                maxLength={MAX_TEXT_LENGTH}
-                onChange={(event) => dispatch({ type: 'text', value: event.target.value })}
-                placeholder="검토할 보고서 내용을 붙여 넣으세요."
-                aria-describedby="text-input-help"
-              />
-              <p id="text-input-help" className="editor-help">
-                공백과 줄바꿈을 포함해 최대 60,000자까지 입력할 수 있습니다.
-              </p>
+              {isProcessing && <small>문서 내용을 읽고 있습니다. 잠시만 기다려 주세요.</small>}
             </div>
+            <Button variant="tertiary" onClick={removeFile} disabled={isProcessing}>
+              <Trash2 /> 삭제
+            </Button>
           </div>
         )}
 

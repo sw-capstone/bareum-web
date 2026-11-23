@@ -10,9 +10,7 @@ import {
 import { request } from './httpClient';
 
 export interface AnalysisRequest {
-  file?: File;
-  text?: string;
-  title?: string;
+  file: File;
   documentType: string;
 }
 
@@ -49,16 +47,14 @@ export const analysisApi = {
     if (env.useMockApi) {
       mockProgress = 0;
       mockPaused = false;
-      mockTitle = (input.title?.trim() || input.file?.name || sampleResult.title).normalize('NFC');
-      mockFilename = (input.file?.name || `${mockTitle}.txt`).normalize('NFC');
+      mockTitle = input.file.name.normalize('NFC');
+      mockFilename = input.file.name.normalize('NFC');
       await wait(250, signal);
       return { analysisId: 'analysis-demo' };
     }
 
     const body = new FormData();
-    if (input.file) body.append('file', input.file);
-    if (input.text) body.append('text', input.text);
-    if (input.title) body.append('title', input.title);
+    body.append('file', input.file);
     body.append('documentType', input.documentType);
     const data = await request<unknown>('/analyses', { method: 'POST', body }, signal);
     return startAnalysisResponseSchema.parse(data);
