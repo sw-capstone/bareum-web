@@ -1,4 +1,12 @@
-import { useEffect, useId, useMemo, useRef, useState, type RefObject } from 'react';
+import {
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type RefObject,
+} from 'react';
 import {
   ChevronDown,
   ExternalLink,
@@ -14,6 +22,7 @@ import {
 import type { AnalysisResult, Issue, Severity } from '../../types';
 import { Button, Modal } from '../../components/ui';
 import { useIssueFilters } from '../../hooks/useIssueFilters';
+import { useIssueConfirmation } from '../../hooks/useIssueConfirmation';
 import { useIssueWorkspace } from '../../hooks/useIssueWorkspace';
 import { useRegenerateSuggestion, useSaveIssueChanges } from '../../hooks/useAnalysis';
 import { ExportMenu } from '../export/ExportDialog';
@@ -38,17 +47,20 @@ export function ResultPage({
   const [section, setSection] = useState(result.sections[0]?.id ?? '');
   const [tocOpen, setTocOpen] = useState(false);
   const documentScrollRef = useRef<HTMLDivElement>(null);
+  const dashboardRef = useRef<HTMLDivElement>(null);
+  const previousCardPositions = useRef(new Map<string, DOMRect>());
   const [zoom, setZoom] = useState(100);
   const [fullscreen, setFullscreen] = useState(false);
   const [finishOpen, setFinishOpen] = useState(false);
   const [finishProgress, setFinishProgress] = useState(0);
   const [finishComplete, setFinishComplete] = useState(false);
   const workspace = useIssueWorkspace(result.issues);
-  const filters = useIssueFilters(workspace.issues);
-  const pendingIssues = workspace.issues.filter((issue) => issue.level === 'pending');
+  const confirmation = useIssueConfirmation(workspace.issues);
+  const filters = useIssueFilters(confirmation.orderedIssues);
+  const pendingIssues = confirmation.orderedIssues.filter((issue) => issue.level === 'pending');
   const active = workspace.issues.find((issue) => issue.id === activeId) ?? null;
-  const openIssues = workspace.issues.filter((issue) => issue.status === 'open');
-  const handled = workspace.issues.length - openIssues.length;
+  const handled = workspace.issues.filter((issue) => confirmation.confirmed.has(issue.id)).length;
+  const remaining = workspace.issues.length - handled;
   const progress = workspace.issues.length
     ? Math.round((handled / workspace.issues.length) * 100)
     : 100;
@@ -60,6 +72,39 @@ export function ResultPage({
       ),
     [workspace.issues],
   );
+
+  useLayoutEffect(() => {
+    const previous = previousCardPositions.current;
+    if (!previous.size) return;
+    previousCardPositions.current = new Map();
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+
+    dashboardRef.current
+      ?.querySelectorAll<HTMLElement>('.issue-card[data-issue-id]')
+      .forEach((card) => {
+        const before = previous.get(card.dataset.issueId ?? '');
+        if (!before) return;
+        const after = card.getBoundingClientRect();
+        const x = before.left - after.left;
+        const y = before.top - after.top;
+        if (Math.abs(x) < 1 && Math.abs(y) < 1) return;
+        card.animate?.(
+          [{ transform: `translate(${x}px, ${y}px)` }, { transform: 'translate(0, 0)' }],
+          { duration: 420, easing: 'cubic-bezier(0.42, 0, 0.58, 1)' },
+        );
+      });
+  }, [confirmation.orderedIssues]);
+
+  function toggleIssueConfirmation(issueId: string) {
+    const positions = new Map<string, DOMRect>();
+    dashboardRef.current
+      ?.querySelectorAll<HTMLElement>('.issue-card[data-issue-id]')
+      .forEach((card) => {
+        if (card.dataset.issueId) positions.set(card.dataset.issueId, card.getBoundingClientRect());
+      });
+    previousCardPositions.current = positions;
+    confirmation.toggle(issueId);
+  }
 
   useEffect(() => {
     if (!finishOpen || finishComplete) return;
@@ -113,8 +158,8 @@ export function ResultPage({
         <div>
           <h1>분석 결과</h1>
           <p>
-            {openIssues.length
-              ? `확인이 필요한 이슈가 ${openIssues.length}건 남아 있습니다.`
+            {remaining
+              ? `확인이 필요한 이슈가 ${remaining}건 남아 있습니다.`
               : '모든 이슈를 확인했습니다.'}
           </p>
         </div>
@@ -141,7 +186,7 @@ export function ResultPage({
         <Metric label="낮음" value={counts.low} tone="low" />
         <Metric label="판단보류" value={counts.pending} />
         <div className="resolution">
-          <span>해결 진행률</span>
+          <span>확인 진행률</span>
           <strong>
             {workspace.issues.length}건 중 {handled}건 확인
           </strong>
@@ -152,7 +197,7 @@ export function ResultPage({
         </div>
       </section>
 
-      <div className={`dashboard${tocOpen ? ' dashboard--toc-open' : ''}`}>
+      <div ref={dashboardRef} className={`dashboard${tocOpen ? ' dashboard--toc-open' : ''}`}>
         <aside className="toc panel" id="result-toc" aria-label="문서 목차" hidden={!tocOpen}>
           <h2>문서 목차</h2>
           {workspace.issues.some((issue) => !issue.location) && (
@@ -160,15 +205,16 @@ export function ResultPage({
               <span>문서 전체 이슈</span>
               <b>
                 {
-                  workspace.issues.filter((issue) => !issue.location && issue.status === 'open')
-                    .length
+                  workspace.issues.filter(
+                    (issue) => !issue.location && !confirmation.confirmed.has(issue.id),
+                  ).length
                 }
               </b>
             </button>
           )}
           {result.sections.map((item) => {
             const count = workspace.issues.filter(
-              (issue) => issue.sectionId === item.id && issue.status === 'open',
+              (issue) => issue.sectionId === item.id && !confirmation.confirmed.has(issue.id),
             ).length;
             return (
               <button
@@ -239,7 +285,13 @@ export function ResultPage({
             <div className="issue-scroll">
               {pendingIssues.length ? (
                 pendingIssues.map((issue) => (
-                  <IssueCard issue={issue} key={issue.id} onSelect={selectIssue} />
+                  <IssueCard
+                    issue={issue}
+                    key={issue.id}
+                    confirmed={confirmation.confirmed.has(issue.id)}
+                    onToggle={() => toggleIssueConfirmation(issue.id)}
+                    onSelect={selectIssue}
+                  />
                 ))
               ) : (
                 <p className="issue-empty">판단 보류 이슈가 없습니다.</p>
@@ -272,7 +324,13 @@ export function ResultPage({
             <div className="issue-scroll">
               {filters.filteredIssues.length ? (
                 filters.filteredIssues.map((issue) => (
-                  <IssueCard issue={issue} key={issue.id} onSelect={selectIssue} />
+                  <IssueCard
+                    issue={issue}
+                    key={issue.id}
+                    confirmed={confirmation.confirmed.has(issue.id)}
+                    onToggle={() => toggleIssueConfirmation(issue.id)}
+                    onSelect={selectIssue}
+                  />
                 ))
               ) : (
                 <p className="issue-empty">해당하는 이슈가 없습니다.</p>
@@ -603,7 +661,17 @@ function Metric({ label, value, tone }: { label: string; value: number; tone?: s
     </div>
   );
 }
-function IssueCard({ issue, onSelect }: { issue: Issue; onSelect: (issue: Issue) => void }) {
+function IssueCard({
+  issue,
+  confirmed,
+  onToggle,
+  onSelect,
+}: {
+  issue: Issue;
+  confirmed: boolean;
+  onToggle: () => void;
+  onSelect: (issue: Issue) => void;
+}) {
   const description =
     issue.level === 'pending'
       ? issue.pendingReason?.trim() || issue.explanation?.trim() || issue.summary
@@ -612,17 +680,28 @@ function IssueCard({ issue, onSelect }: { issue: Issue; onSelect: (issue: Issue)
         : issue.suggestion?.trim() || issue.summary;
 
   return (
-    <button className={`issue-card ${issue.status}`} onClick={() => onSelect(issue)}>
-      <div>
+    <article className={`issue-card${confirmed ? ' is-confirmed' : ''}`} data-issue-id={issue.id}>
+      <div className="issue-card__top">
         <Status level={issue.level} />
-        <small>{statusLabel(issue.status)}</small>
+        <button
+          type="button"
+          role="switch"
+          aria-label={`${issue.title} 확인`}
+          aria-checked={confirmed}
+          className="issue-confirmation"
+          onClick={onToggle}
+        >
+          <span aria-hidden="true" />
+        </button>
       </div>
-      <strong>{description}</strong>
-      <span>
-        {issue.location ?? '문서 전체'}
-        <b>상세 보기</b>
-      </span>
-    </button>
+      <button type="button" className="issue-card__details" onClick={() => onSelect(issue)}>
+        <strong>{description}</strong>
+        <span>
+          {issue.location ?? '문서 전체'}
+          <b>상세 보기</b>
+        </span>
+      </button>
+    </article>
   );
 }
 function Status({ level }: { level: Severity }) {
@@ -666,7 +745,4 @@ function Label({
       {children}
     </section>
   );
-}
-function statusLabel(status: Issue['status']) {
-  return status === 'resolved' ? '해결' : status === 'ignored' ? '무시' : '미해결';
 }

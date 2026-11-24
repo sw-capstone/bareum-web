@@ -8,18 +8,9 @@ export function useIssueFilters(issues: Issue[]) {
   const [severity, setSeverity] = useState<Filter<FilterableSeverity>>('all');
   const filteredIssues = useMemo(
     () =>
-      issues
-        .filter(
-          (issue) => issue.level !== 'pending' && (severity === 'all' || issue.level === severity),
-        )
-        .sort((a, b) => {
-          if (!a.location && b.location) return -1;
-          if (a.location && !b.location) return 1;
-          return (
-            (a.locationOrder ?? Number.MAX_SAFE_INTEGER) -
-            (b.locationOrder ?? Number.MAX_SAFE_INTEGER)
-          );
-        }),
+      issues.filter(
+        (issue) => issue.level !== 'pending' && (severity === 'all' || issue.level === severity),
+      ),
     [issues, severity],
   );
   return { severity, setSeverity, filteredIssues };

@@ -107,6 +107,72 @@ describe('ResultPage document view', () => {
     ).toBeVisible();
   });
 
+  it('확인 토글을 켜고 끄면 카드 순서와 확인 진행률이 바뀌고 문서 원문은 유지된다', async () => {
+    renderResult();
+    const regular = screen.getByRole('region', { name: '이슈 목록' });
+    const progress = document.querySelector('.resolution');
+    const first = within(regular).getByRole('switch', { name: '근거 법령 미기재 확인' });
+    const second = within(regular).getByRole('switch', { name: '숫자 표기 상이 확인' });
+    const cardOrder = () =>
+      Array.from(regular.querySelectorAll('.issue-card')).map((card) =>
+        card.querySelector('[role="switch"]')?.getAttribute('aria-label'),
+      );
+
+    expect(first).toHaveAttribute('aria-checked', 'false');
+    expect(progress).toHaveTextContent('7건 중 0건 확인');
+    await userEvent.click(first);
+    expect(first).toHaveAttribute('aria-checked', 'true');
+    expect(first.closest('.issue-card')).toHaveClass('is-confirmed');
+    expect(cardOrder().at(-1)).toBe('근거 법령 미기재 확인');
+    expect(progress).toHaveTextContent('7건 중 1건 확인');
+    expect(progress).toHaveTextContent('14%');
+    expect(document.querySelector('.paper')).toHaveTextContent(
+      '근거 법령은 별도로 명시하지 않았다.',
+    );
+
+    await userEvent.click(second);
+    expect(cardOrder().slice(-2)).toEqual(['근거 법령 미기재 확인', '숫자 표기 상이 확인']);
+    await userEvent.click(first);
+    expect(first).toHaveAttribute('aria-checked', 'false');
+    expect(first.closest('.issue-card')).not.toHaveClass('is-confirmed');
+    expect(cardOrder().slice(-2)).toEqual(['근거 법령 미기재 확인', '숫자 표기 상이 확인']);
+    expect(progress).toHaveTextContent('7건 중 1건 확인');
+    await userEvent.click(second);
+    expect(progress).toHaveTextContent('7건 중 0건 확인');
+  });
+
+  it('판단 보류 토글도 키보드로 조작하고 확인 상태에 따라 순서를 바꾼다', async () => {
+    const additionalPending = {
+      ...sampleResult.issues[6],
+      id: 'i8',
+      title: '추가 표 확인 필요',
+      pendingReason: '추가 표 확인이 필요합니다.',
+    };
+    render(
+      <ResultPage
+        result={{ ...sampleResult, issues: [...sampleResult.issues, additionalPending] }}
+        analysisId="two-pending"
+        onFinish={vi.fn()}
+      />,
+    );
+    const pending = screen.getByRole('region', { name: '판단 보류' });
+    const first = within(pending).getByRole('switch', { name: '표 검사 결과 확인 필요 확인' });
+    const second = within(pending).getByRole('switch', { name: '추가 표 확인 필요 확인' });
+    const cardOrder = () =>
+      Array.from(pending.querySelectorAll('.issue-card')).map((card) =>
+        card.querySelector('[role="switch"]')?.getAttribute('aria-label'),
+      );
+
+    first.focus();
+    await userEvent.keyboard(' ');
+    expect(first).toHaveAttribute('aria-checked', 'true');
+    expect(cardOrder()).toEqual(['추가 표 확인 필요 확인', '표 검사 결과 확인 필요 확인']);
+    await userEvent.click(second);
+    await userEvent.click(first);
+    expect(cardOrder()).toEqual(['표 검사 결과 확인 필요 확인', '추가 표 확인 필요 확인']);
+    expect(screen.getByText('8건 중 1건 확인')).toBeVisible();
+  });
+
   it('문서 목차를 열고 닫으며 선택한 절로 문서 내부를 이동한다', async () => {
     renderResult();
     const scroller = document.querySelector<HTMLDivElement>('.paper-wrap');
@@ -220,7 +286,7 @@ describe('ResultPage document view', () => {
     );
     expect(
       screen.getByRole('button', {
-        name: /판단보류 무시 원문 위치와 셀 구조를 특정할 수 없어 표 관련 검사를 수행하지 못했습니다/,
+        name: /원문 위치와 셀 구조를 특정할 수 없어 표 관련 검사를 수행하지 못했습니다/,
       }),
     ).toBeVisible();
   });
@@ -292,7 +358,7 @@ describe('ResultPage document view', () => {
 
     await userEvent.click(
       screen.getByRole('button', {
-        name: /높음 무시 본 사업은.*지방재정법/,
+        name: /본 사업은.*지방재정법/,
       }),
     );
     expect(screen.getByRole('textbox', { name: '최종 적용 문장' })).toBeDisabled();
@@ -303,7 +369,7 @@ describe('ResultPage document view', () => {
     await userEvent.click(screen.getByRole('button', { name: '무시 해제' }));
     await userEvent.click(
       screen.getByRole('button', {
-        name: /높음 미해결 본 사업은.*지방재정법/,
+        name: /본 사업은.*지방재정법/,
       }),
     );
     expect(screen.getByRole('textbox', { name: '최종 적용 문장' })).toBeEnabled();
