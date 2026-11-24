@@ -1603,56 +1603,75 @@ svg {
   border: 1px solid var(--fog-200);
   border-radius: 10px;
   padding: 11px;
-  text-align: left;
-  cursor: pointer;
 }
-.issue-card:hover {
+.issue-card:hover,
+.issue-card:focus-within {
   border-color: var(--navy-500);
   box-shadow: var(--shadow-sm);
 }
-.issue-card.resolved {
+.issue-card.is-confirmed {
   background: var(--fog-100);
   border-color: var(--fog-300);
-  opacity: 1;
 }
-.issue-card.resolved small {
-  background: var(--teal-700);
-  border-color: var(--teal-700);
-  color: #fff;
-}
-.issue-card.ignored {
-  background: var(--fog-50);
-  border-style: dashed;
-}
-.issue-card.ignored small {
-  background: var(--fog-700);
-  color: #fff;
-}
-.issue-card > div {
+.issue-card__top {
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
-.issue-card small {
-  font-size: 10px;
+.issue-confirmation {
+  width: 34px;
+  height: 20px;
+  padding: 2px;
   border: 1px solid var(--fog-300);
-  border-radius: 5px;
-  padding: 1px 5px;
+  border-radius: 20px;
+  background: var(--fog-300);
+  cursor: pointer;
+  transition: background 160ms ease;
 }
-.issue-card > strong {
+.issue-confirmation[aria-checked='true'] {
+  background: var(--teal-700);
+  border-color: var(--teal-700);
+}
+.issue-confirmation span {
+  display: block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+  transition: transform 160ms ease;
+}
+.issue-confirmation[aria-checked='true'] span {
+  transform: translateX(14px);
+}
+.issue-confirmation:focus-visible,
+.issue-card__details:focus-visible {
+  outline: 2px solid var(--navy-500);
+  outline-offset: 2px;
+}
+.issue-card__details {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+.issue-card__details > strong {
   display: block;
   font-size: 12px;
   line-height: 1.5;
   margin: 8px 0;
   color: var(--ink-700);
 }
-.issue-card > span {
+.issue-card__details > span {
   display: flex;
   justify-content: space-between;
   color: var(--fog-500);
   font-size: 10px;
 }
-.issue-card > span b {
+.issue-card__details > span b {
   color: var(--teal-700);
 }
 .status {
