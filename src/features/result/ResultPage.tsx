@@ -90,7 +90,7 @@ export function ResultPage({
         if (Math.abs(x) < 1 && Math.abs(y) < 1) return;
         card.animate?.(
           [{ transform: `translate(${x}px, ${y}px)` }, { transform: 'translate(0, 0)' }],
-          { duration: 550, easing: 'cubic-bezier(0.42, 0, 0.58, 1)' },
+          { duration: 420, easing: 'cubic-bezier(0.42, 0, 0.58, 1)' },
         );
       });
   }, [confirmation.orderedIssues]);
