@@ -12,15 +12,15 @@ import {
 describe('analysis completion state', () => {
   beforeEach(() => sessionStorage.clear());
 
-  it('미완료 결과는 최근 결과로만 유지하고 기록에는 표시하지 않는다', () => {
-    setRecentAnalysis({ id: 'analysis-1', status: 'result' });
+  it('진행 중인 분석은 기록에 표시하지 않는다', () => {
+    setRecentAnalysis({ id: 'analysis-1', status: 'analyzing' });
 
-    expect(getRecentAnalysis()).toEqual({ id: 'analysis-1', status: 'result' });
+    expect(getRecentAnalysis()).toEqual({ id: 'analysis-1', status: 'analyzing' });
     expect(getAnalysisRecords()).toEqual([]);
   });
 
-  it('수정 끝내기 완료 후 최근 결과를 기록으로 확정한다', () => {
-    setRecentAnalysis({ id: 'analysis-1', status: 'result' });
+  it('분석과 리포트 생성 완료 후 기록을 한 번만 저장한다', () => {
+    setRecentAnalysis({ id: 'analysis-1', status: 'analyzing' });
     completeAnalysis({
       id: 'analysis-1',
       title: '테스트 보고서',
@@ -28,7 +28,15 @@ describe('analysis completion state', () => {
       completedAt: '2026-10-11T12:00:00.000Z',
     });
 
-    expect(getRecentAnalysis()).toBeNull();
+    expect(getRecentAnalysis()).toEqual({ id: 'analysis-1', status: 'result' });
+    expect(getAnalysisRecords()).toHaveLength(1);
+    expect(getAnalysisRecords()[0].title).toBe('테스트 보고서');
+    completeAnalysis({
+      id: 'analysis-1',
+      title: '다른 제목',
+      filename: 'other.pdf',
+      completedAt: '2026-10-12T12:00:00.000Z',
+    });
     expect(getAnalysisRecords()).toHaveLength(1);
     expect(getAnalysisRecords()[0].title).toBe('테스트 보고서');
   });

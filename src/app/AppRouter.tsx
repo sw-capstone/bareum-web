@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Navigate,
   Outlet,
@@ -6,14 +6,13 @@ import {
   Routes,
   useLocation,
   useNavigate,
-  useOutletContext,
   useParams,
 } from 'react-router-dom';
 import { Header } from '../components/Header';
-import { Button, Modal } from '../components/ui';
 import { PageError, PageLoading } from '../components/AsyncState';
 import { useSession } from '../contexts/session';
 import {
+  analysisKeys,
   useAnalysisProgress,
   useAnalysisResult,
   useCancelAnalysis,
@@ -53,6 +52,7 @@ import { authApi } from '../services/authApi';
 import { ApiError } from '../services/httpClient';
 import { useQueryClient } from '@tanstack/react-query';
 import { clearAnalysisSession } from '../features/account/recentAnalysis';
+import type { AnalysisProgress } from '../services/contracts';
 
 function screenFor(pathname: string): Screen {
   if (pathname.startsWith('/history')) return 'history';
@@ -76,7 +76,6 @@ function AppShell() {
   const [recentAnalysis, setRecentAnalysisState] = useState<RecentAnalysis | null>(() =>
     getRecentAnalysis(),
   );
-  const [pendingNavigation, setPendingNavigation] = useState<Screen | null>(null);
   const [logoutError, setLogoutError] = useState('');
   useEffect(() => {
     const update = () => setRecentAnalysisState(getRecentAnalysis());
@@ -84,20 +83,6 @@ function AppShell() {
     return () => window.removeEventListener(RECENT_ANALYSIS_EVENT, update);
   }, []);
   const screen = screenFor(location.pathname);
-  const id = location.pathname.split('/')[2] || 'analysis-demo';
-  const isUnfinishedResult =
-    screen === 'dashboard' && recentAnalysis?.id === id && recentAnalysis.status === 'result';
-  useEffect(() => {
-    if (!isUnfinishedResult) return;
-    const warn = (event: BeforeUnloadEvent) => event.preventDefault();
-    window.addEventListener('beforeunload', warn);
-    return () => window.removeEventListener('beforeunload', warn);
-  }, [isUnfinishedResult]);
-  const markRecentResult = useCallback((analysisId: string) => {
-    const next = { id: analysisId, status: 'result' as const };
-    setRecentAnalysis(next);
-    setRecentAnalysisState(getRecentAnalysis());
-  }, []);
   const moveTo = (destination: Screen) => {
     if (destination === 'settings') {
       navigate('/settings', { state: { from: location.pathname } });
@@ -128,10 +113,7 @@ function AppShell() {
         screen={screen}
         hasActiveAnalysis={recentAnalysis?.status === 'analyzing'}
         hasRecentResult={recentAnalysis?.status === 'result'}
-        onNavigate={(s) => {
-          if (isUnfinishedResult && s !== 'dashboard') setPendingNavigation(s);
-          else moveTo(s);
-        }}
+        onNavigate={moveTo}
         onLogout={async () => {
           try {
             await authApi.logout();
@@ -149,40 +131,7 @@ function AppShell() {
           {logoutError}
         </p>
       )}
-      <Outlet context={{ markRecentResult }} />
-      {pendingNavigation && (
-        <Modal
-          label="분석 결과 화면 나가기"
-          className="leave-result-modal"
-          onClose={() => setPendingNavigation(null)}
-        >
-          <div className="modal-head">
-            <div>
-              <h2>분석을 아직 완료하지 않았습니다</h2>
-              <p>수정 끝내기 전에는 분석 기록에 저장되지 않습니다.</p>
-            </div>
-          </div>
-          <div className="leave-result-note">
-            현재 분석 결과는 임시로 보관됩니다. 계정 메뉴의 분석 결과보기를 통해 돌아와 작업을
-            계속할 수 있습니다.
-          </div>
-          <div className="modal-actions">
-            <Button variant="secondary" onClick={() => setPendingNavigation(null)}>
-              분석 결과로 돌아가기
-            </Button>
-            <Button
-              variant="tertiary"
-              onClick={() => {
-                const destination = pendingNavigation;
-                setPendingNavigation(null);
-                moveTo(destination);
-              }}
-            >
-              완료하지 않고 나가기
-            </Button>
-          </div>
-        </Modal>
-      )}
+      <Outlet />
     </>
   );
 }
@@ -256,15 +205,29 @@ function AnalysisRoute() {
   const pause = usePauseAnalysis();
   const resume = useResumeAnalysis();
   useEffect(() => {
-    if (!isCancelDialogOpen && progress.data?.status === 'completed')
+    if (!isCancelDialogOpen && progress.data?.status === 'completed') {
+      completeAnalysis({
+        id,
+        title: progress.data.title ?? progress.data.filename ?? '분석 보고서',
+        filename: progress.data.filename ?? '분석 보고서',
+        completedAt: new Date().toISOString(),
+      });
       navigate(`/analyses/${id}/result`, { replace: true });
+    }
     if (
       !isCancelDialogOpen &&
       (progress.data?.status === 'partial_failed' || progress.data?.status === 'failed')
     )
       navigate(`/analyses/${id}/failed`, { replace: true });
     if (progress.data?.status === 'canceled') navigate('/upload', { replace: true });
-  }, [id, isCancelDialogOpen, navigate, progress.data?.status]);
+  }, [
+    id,
+    isCancelDialogOpen,
+    navigate,
+    progress.data?.status,
+    progress.data?.title,
+    progress.data?.filename,
+  ]);
   if (progress.isError) return <PageError onRetry={() => progress.refetch()} />;
   const analysis = progress.data ?? {
     status: 'queued' as const,
@@ -370,28 +333,17 @@ function ReportHistoryRoute() {
 }
 function ResultRoute() {
   const { id = '' } = useParams();
-  const { markRecentResult } = useOutletContext<{
-    markRecentResult: (analysisId: string) => void;
-  }>();
+  const queryClient = useQueryClient();
   const query = useAnalysisResult(id);
-  useEffect(() => {
-    markRecentResult(id);
-  }, [id, markRecentResult]);
+  const progress = queryClient.getQueryData<AnalysisProgress>(analysisKeys.progress(id));
+  const reportGenerationFailed =
+    progress?.checks?.some(
+      (check) => check.id === 'report-generation' && check.status === 'failed',
+    ) ?? false;
   if (query.isLoading) return <PageLoading label="분석 결과를 불러오고 있습니다" />;
   if (query.isError || !query.data) return <PageError onRetry={() => query.refetch()} />;
   return (
-    <ResultPage
-      key={id}
-      result={query.data}
-      onFinish={() =>
-        completeAnalysis({
-          id,
-          title: query.data.title,
-          filename: query.data.filename,
-          completedAt: new Date().toISOString(),
-        })
-      }
-    />
+    <ResultPage key={id} result={query.data} reportGenerationFailed={reportGenerationFailed} />
   );
 }
 export function AppRouter() {

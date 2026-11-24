@@ -47,7 +47,6 @@ export function getRecentAnalysis(): RecentAnalysis | null {
 }
 
 export function setRecentAnalysis(value: RecentAnalysis) {
-  if (getAnalysisRecords().some((record) => record.id === value.id)) return;
   sessionStorage.setItem(STORAGE_KEY, JSON.stringify(value));
   window.dispatchEvent(new Event(RECENT_ANALYSIS_EVENT));
 }
@@ -110,10 +109,11 @@ export function ensureAnalysisHistoryDemo() {
 }
 
 export function completeAnalysis(record: AnalysisRecord) {
-  const records = getAnalysisRecords().filter((item) => item.id !== record.id);
+  const existing = getAnalysisRecords();
+  if (existing.some((item) => item.id === record.id)) return;
+  const records = existing;
   sessionStorage.setItem(RECORDS_KEY, JSON.stringify([record, ...records]));
-  const recent = getRecentAnalysis();
-  if (recent?.id === record.id) sessionStorage.removeItem(STORAGE_KEY);
+  setRecentAnalysis({ id: record.id, status: 'result' });
   window.dispatchEvent(new Event(RECENT_ANALYSIS_EVENT));
 }
 

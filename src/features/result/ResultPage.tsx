@@ -1,8 +1,8 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import {
   ChevronDown,
   ExternalLink,
-  FileCheck2,
+  FileText,
   Maximize2,
   Minus,
   ListTree,
@@ -13,7 +13,11 @@ import type { AnalysisResult, Issue, Severity } from '../../types';
 import { Button, Modal } from '../../components/ui';
 import { useIssueFilters } from '../../hooks/useIssueFilters';
 import { useIssueConfirmation } from '../../hooks/useIssueConfirmation';
-import { ExportMenu } from '../export/ExportDialog';
+import {
+  resultReportApi,
+  ResultReportUnavailableError,
+  type ResultReport,
+} from '../../services/resultReportApi';
 
 const severityLabels: Record<Severity, string> = {
   high: '높음',
@@ -22,7 +26,13 @@ const severityLabels: Record<Severity, string> = {
   pending: '판단보류',
 };
 
-export function ResultPage({ result, onFinish }: { result: AnalysisResult; onFinish: () => void }) {
+export function ResultPage({
+  result,
+  reportGenerationFailed = false,
+}: {
+  result: AnalysisResult;
+  reportGenerationFailed?: boolean;
+}) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [section, setSection] = useState(result.sections[0]?.id ?? '');
   const [tocOpen, setTocOpen] = useState(false);
@@ -31,9 +41,11 @@ export function ResultPage({ result, onFinish }: { result: AnalysisResult; onFin
   const previousCardPositions = useRef(new Map<string, DOMRect>());
   const [zoom, setZoom] = useState(100);
   const [fullscreen, setFullscreen] = useState(false);
-  const [finishOpen, setFinishOpen] = useState(false);
-  const [finishProgress, setFinishProgress] = useState(0);
-  const [finishComplete, setFinishComplete] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportState, setReportState] = useState<
+    'idle' | 'loading' | 'ready' | 'error' | 'unavailable'
+  >('idle');
+  const [report, setReport] = useState<ResultReport | null>(null);
   const confirmation = useIssueConfirmation(result.issues);
   const filters = useIssueFilters(confirmation.orderedIssues);
   const pendingIssues = confirmation.orderedIssues.filter((issue) => issue.level === 'pending');
@@ -85,19 +97,18 @@ export function ResultPage({ result, onFinish }: { result: AnalysisResult; onFin
     else confirmation.toggle(issueId);
   }
 
-  useEffect(() => {
-    if (!finishOpen || finishComplete) return;
-    const timer = window.setInterval(() => {
-      setFinishProgress((current) => {
-        if (current < 90) return current + 10;
-        window.clearInterval(timer);
-        setFinishComplete(true);
-        onFinish();
-        return 100;
-      });
-    }, 100);
-    return () => window.clearInterval(timer);
-  }, [finishComplete, finishOpen, onFinish]);
+  async function openReport() {
+    setReportOpen(true);
+    if (reportGenerationFailed || reportState === 'ready') return;
+    setReportState('loading');
+    try {
+      const data = await resultReportApi.get(result.id, result);
+      setReport(data);
+      setReportState('ready');
+    } catch (error) {
+      setReportState(error instanceof ResultReportUnavailableError ? 'unavailable' : 'error');
+    }
+  }
 
   function selectIssue(issue: Issue) {
     setActiveId(issue.id);
@@ -138,19 +149,10 @@ export function ResultPage({ result, onFinish }: { result: AnalysisResult; onFin
           </p>
         </div>
         <div className="result-title-actions">
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={() => {
-              setFinishProgress(0);
-              setFinishComplete(false);
-              setFinishOpen(true);
-            }}
-          >
-            <FileCheck2 />
-            수정 끝내기
+          <Button size="sm" onClick={openReport}>
+            <FileText />
+            결과 리포트
           </Button>
-          <ExportMenu result={result} />
         </div>
       </div>
 
@@ -328,36 +330,83 @@ export function ResultPage({ result, onFinish }: { result: AnalysisResult; onFin
           }}
         />
       )}
-      {finishOpen && (
+      {reportOpen && (
         <Modal
-          label="분석 완료"
-          className="finish-analysis-modal"
-          onClose={() => {
-            if (finishComplete) setFinishOpen(false);
-          }}
+          label="결과 리포트"
+          className="result-report-modal"
+          onClose={() => setReportOpen(false)}
         >
-          <div className="finish-analysis-body">
-            <span className={`finish-analysis-icon ${finishComplete ? 'complete' : ''}`}>
-              <FileCheck2 />
-            </span>
-            <h2>
-              {finishComplete ? '분석이 완료되었습니다' : '최종 분석 리포트를 생성하고 있습니다'}
-            </h2>
-            <p>
-              {finishComplete
-                ? '분석 기록이 저장되었습니다. 내 분석 기록에서 언제든 다시 확인할 수 있습니다.'
-                : '현재까지 반영된 수정사항을 바탕으로 결과를 정리하고 있습니다.'}
-            </p>
-            <div className="finish-progress" aria-label="리포트 생성 진행률">
-              <i style={{ width: `${finishProgress}%` }} />
+          <div className="result-report-head">
+            <div>
+              <h2>결과 리포트</h2>
+              <p>{result.title}</p>
             </div>
-            <strong>{finishProgress}%</strong>
+            <button
+              type="button"
+              aria-label="결과 리포트 닫기"
+              onClick={() => setReportOpen(false)}
+            >
+              <X />
+            </button>
           </div>
-          {finishComplete && (
-            <div className="modal-actions">
-              <Button onClick={() => setFinishOpen(false)}>완료</Button>
+          {reportGenerationFailed ? (
+            <div className="result-report-message" role="alert">
+              <h3>결과 리포트 생성에 실패했습니다</h3>
+              <p>분석 결과는 확인할 수 있지만 리포트는 아직 준비되지 않았습니다.</p>
             </div>
-          )}
+          ) : reportState === 'loading' ? (
+            <div className="result-report-message" role="status">
+              결과 리포트를 불러오고 있습니다.
+            </div>
+          ) : reportState === 'unavailable' ? (
+            <div className="result-report-message" role="alert">
+              <h3>결과 리포트 조회를 준비 중입니다</h3>
+              <p>서버의 리포트 조회 기능이 연결되면 이곳에서 확인할 수 있습니다.</p>
+            </div>
+          ) : reportState === 'error' ? (
+            <div className="result-report-message" role="alert">
+              <h3>결과 리포트를 불러오지 못했습니다</h3>
+              <p>잠시 후 다시 시도해 주세요.</p>
+              <Button variant="secondary" onClick={openReport}>
+                다시 시도
+              </Button>
+            </div>
+          ) : report ? (
+            <div className="result-report-content">
+              <div className="result-report-summary">
+                <div>
+                  <span>종합 점수</span>
+                  <strong>{report.score}점</strong>
+                </div>
+                <div>
+                  <span>평가 등급</span>
+                  <strong>{report.grade}</strong>
+                </div>
+                <div>
+                  <span>발견한 이슈</span>
+                  <strong>{report.findings.length}건</strong>
+                </div>
+              </div>
+              <h3>검토 결과</h3>
+              <p>
+                높음 {report.issueCounts.high}건 · 중간 {report.issueCounts.medium}건 · 낮음{' '}
+                {report.issueCounts.low}건 · 판단 보류 {report.issueCounts.pending}건
+              </p>
+              <div className="result-report-findings">
+                {report.findings.map((finding) => (
+                  <section key={finding.id}>
+                    <h4>{finding.title}</h4>
+                    <p>{finding.explanation}</p>
+                    {finding.suggestion && (
+                      <p>
+                        <strong>수정 제안</strong> {finding.suggestion}
+                      </p>
+                    )}
+                  </section>
+                ))}
+              </div>
+            </div>
+          ) : null}
         </Modal>
       )}
       {fullscreen && (
