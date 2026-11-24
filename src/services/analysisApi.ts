@@ -1,6 +1,6 @@
 import { env } from '../config/env';
 import { sampleResult } from '../mocks/analysis';
-import type { AnalysisResult, Issue } from '../types';
+import type { AnalysisResult } from '../types';
 import {
   analysisProgressSchema,
   analysisResultSchema,
@@ -136,26 +136,5 @@ export const analysisApi = {
     }
     const data = await request<unknown>(`/analyses/${id}/retry`, { method: 'POST' }, signal);
     return startAnalysisResponseSchema.parse(data);
-  },
-
-  async updateIssue(analysisId: string, issueId: string, patch: Partial<Issue>) {
-    if (env.useMockApi) {
-      await wait(250);
-      return;
-    }
-    await request(`/analyses/${analysisId}/issues/${issueId}`, {
-      method: 'PATCH',
-      body: JSON.stringify(patch),
-    });
-  },
-
-  async regenerateSuggestion(analysisId: string, issueId: string) {
-    if (env.useMockApi) {
-      await wait(450);
-      return { suggestion: '근거와 문맥을 반영해 표현을 명확하게 다듬은 새로운 수정안입니다.' };
-    }
-    return request<{ suggestion: string }>(`/analyses/${analysisId}/issues/${issueId}/suggestion`, {
-      method: 'POST',
-    });
   },
 };
