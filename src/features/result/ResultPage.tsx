@@ -1,30 +1,18 @@
-import {
-  useEffect,
-  useId,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-  type RefObject,
-} from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import {
   ChevronDown,
   ExternalLink,
   FileCheck2,
-  Info,
   Maximize2,
   Minus,
   ListTree,
   Plus,
-  RefreshCw,
   X,
 } from 'lucide-react';
 import type { AnalysisResult, Issue, Severity } from '../../types';
 import { Button, Modal } from '../../components/ui';
 import { useIssueFilters } from '../../hooks/useIssueFilters';
 import { useIssueConfirmation } from '../../hooks/useIssueConfirmation';
-import { useIssueWorkspace } from '../../hooks/useIssueWorkspace';
-import { useRegenerateSuggestion, useSaveIssueChanges } from '../../hooks/useAnalysis';
 import { ExportMenu } from '../export/ExportDialog';
 
 const severityLabels: Record<Severity, string> = {
@@ -34,15 +22,7 @@ const severityLabels: Record<Severity, string> = {
   pending: '판단보류',
 };
 
-export function ResultPage({
-  result,
-  analysisId,
-  onFinish,
-}: {
-  result: AnalysisResult;
-  analysisId: string;
-  onFinish: () => void;
-}) {
+export function ResultPage({ result, onFinish }: { result: AnalysisResult; onFinish: () => void }) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [section, setSection] = useState(result.sections[0]?.id ?? '');
   const [tocOpen, setTocOpen] = useState(false);
@@ -54,23 +34,20 @@ export function ResultPage({
   const [finishOpen, setFinishOpen] = useState(false);
   const [finishProgress, setFinishProgress] = useState(0);
   const [finishComplete, setFinishComplete] = useState(false);
-  const workspace = useIssueWorkspace(result.issues);
-  const confirmation = useIssueConfirmation(workspace.issues);
+  const confirmation = useIssueConfirmation(result.issues);
   const filters = useIssueFilters(confirmation.orderedIssues);
   const pendingIssues = confirmation.orderedIssues.filter((issue) => issue.level === 'pending');
-  const active = workspace.issues.find((issue) => issue.id === activeId) ?? null;
-  const handled = workspace.issues.filter((issue) => confirmation.confirmed.has(issue.id)).length;
-  const remaining = workspace.issues.length - handled;
-  const progress = workspace.issues.length
-    ? Math.round((handled / workspace.issues.length) * 100)
-    : 100;
+  const active = result.issues.find((issue) => issue.id === activeId) ?? null;
+  const handled = result.issues.filter((issue) => confirmation.confirmed.has(issue.id)).length;
+  const remaining = result.issues.length - handled;
+  const progress = result.issues.length ? Math.round((handled / result.issues.length) * 100) : 100;
   const counts = useMemo(
     () =>
-      workspace.issues.reduce(
+      result.issues.reduce(
         (current, issue) => ({ ...current, [issue.level]: current[issue.level] + 1 }),
         { high: 0, medium: 0, low: 0, pending: 0 },
       ),
-    [workspace.issues],
+    [result.issues],
   );
 
   useLayoutEffect(() => {
@@ -95,7 +72,8 @@ export function ResultPage({
       });
   }, [confirmation.orderedIssues]);
 
-  function toggleIssueConfirmation(issueId: string) {
+  function changeIssueConfirmation(issueId: string, confirmOnly = false) {
+    if (confirmOnly && confirmation.confirmed.has(issueId)) return;
     const positions = new Map<string, DOMRect>();
     dashboardRef.current
       ?.querySelectorAll<HTMLElement>('.issue-card[data-issue-id]')
@@ -103,7 +81,8 @@ export function ResultPage({
         if (card.dataset.issueId) positions.set(card.dataset.issueId, card.getBoundingClientRect());
       });
     previousCardPositions.current = positions;
-    confirmation.toggle(issueId);
+    if (confirmOnly) confirmation.confirm(issueId);
+    else confirmation.toggle(issueId);
   }
 
   useEffect(() => {
@@ -147,11 +126,6 @@ export function ResultPage({
     });
   }
 
-  function renderedSegment(text: string, issueId?: string) {
-    const issue = workspace.issues.find((item) => item.id === issueId);
-    return issue?.status === 'resolved' && issue.appliedText ? issue.appliedText : text;
-  }
-
   return (
     <main className="result-page">
       <div className="result-title">
@@ -188,7 +162,7 @@ export function ResultPage({
         <div className="resolution">
           <span>확인 진행률</span>
           <strong>
-            {workspace.issues.length}건 중 {handled}건 확인
+            {result.issues.length}건 중 {handled}건 확인
           </strong>
           <div>
             <i style={{ width: `${progress}%` }} />
@@ -200,12 +174,12 @@ export function ResultPage({
       <div ref={dashboardRef} className={`dashboard${tocOpen ? ' dashboard--toc-open' : ''}`}>
         <aside className="toc panel" id="result-toc" aria-label="문서 목차" hidden={!tocOpen}>
           <h2>문서 목차</h2>
-          {workspace.issues.some((issue) => !issue.location) && (
+          {result.issues.some((issue) => !issue.location) && (
             <button className={!section ? 'active' : ''} onClick={() => goToSection('')}>
               <span>문서 전체 이슈</span>
               <b>
                 {
-                  workspace.issues.filter(
+                  result.issues.filter(
                     (issue) => !issue.location && !confirmation.confirmed.has(issue.id),
                   ).length
                 }
@@ -213,7 +187,7 @@ export function ResultPage({
             </button>
           )}
           {result.sections.map((item) => {
-            const count = workspace.issues.filter(
+            const count = result.issues.filter(
               (issue) => issue.sectionId === item.id && !confirmation.confirmed.has(issue.id),
             ).length;
             return (
@@ -262,10 +236,9 @@ export function ResultPage({
           </div>
           <DocumentPaper
             result={result}
-            issues={workspace.issues}
+            issues={result.issues}
             zoom={zoom}
             onIssue={selectIssue}
-            renderText={renderedSegment}
             scrollContainerRef={documentScrollRef}
           />
           <div className="legend">
@@ -289,7 +262,7 @@ export function ResultPage({
                     issue={issue}
                     key={issue.id}
                     confirmed={confirmation.confirmed.has(issue.id)}
-                    onToggle={() => toggleIssueConfirmation(issue.id)}
+                    onToggle={() => changeIssueConfirmation(issue.id)}
                     onSelect={selectIssue}
                   />
                 ))
@@ -328,7 +301,7 @@ export function ResultPage({
                     issue={issue}
                     key={issue.id}
                     confirmed={confirmation.confirmed.has(issue.id)}
-                    onToggle={() => toggleIssueConfirmation(issue.id)}
+                    onToggle={() => changeIssueConfirmation(issue.id)}
                     onSelect={selectIssue}
                   />
                 ))
@@ -341,15 +314,18 @@ export function ResultPage({
       </div>
 
       <p className="disclaimer">
-        분석 결과는 참고용이며 법적 효력이 없습니다. 최종 반영 전 반드시 내용을 확인해 주세요.
+        분석 결과는 참고용이며 법적 효력이 없습니다. 제안 내용을 원본 문서에 반영할지는 직접 판단해
+        주세요.
       </p>
 
       {active && (
         <IssueDetail
           issue={active}
-          analysisId={analysisId}
           onClose={() => setActiveId(null)}
-          onSaved={(patch) => workspace.updateIssue(active.id, patch)}
+          onConfirm={() => {
+            changeIssueConfirmation(active.id, true);
+            setActiveId(null);
+          }}
         />
       )}
       {finishOpen && (
@@ -399,13 +375,7 @@ export function ResultPage({
               <X />
             </button>
           </div>
-          <DocumentPaper
-            result={result}
-            issues={workspace.issues}
-            onIssue={selectIssue}
-            renderText={renderedSegment}
-            fullscreen
-          />
+          <DocumentPaper result={result} issues={result.issues} onIssue={selectIssue} fullscreen />
         </Modal>
       )}
     </main>
@@ -414,34 +384,13 @@ export function ResultPage({
 
 function IssueDetail({
   issue,
-  analysisId,
   onClose,
-  onSaved,
+  onConfirm,
 }: {
   issue: Issue;
-  analysisId: string;
   onClose: () => void;
-  onSaved: (patch: Partial<Issue>) => void;
+  onConfirm: () => void;
 }) {
-  const save = useSaveIssueChanges(analysisId);
-  const regenerate = useRegenerateSuggestion(analysisId);
-  const [suggestion, setSuggestion] = useState(issue.suggestion);
-  const [draft, setDraft] = useState(issue.appliedText ?? '');
-  const [error, setError] = useState('');
-  const isLocked = issue.status === 'resolved' || issue.status === 'ignored';
-  const canApply = issue.suggestionAvailable !== false && Boolean(draft.trim());
-
-  async function persist(patch: Partial<Issue>, closeAfterSave = false) {
-    setError('');
-    try {
-      await save.mutateAsync({ issueId: issue.id, patch });
-      onSaved(patch);
-      if (closeAfterSave) onClose();
-    } catch {
-      setError('변경 사항을 저장하지 못했습니다. 입력 내용은 유지됩니다. 다시 시도해 주세요.');
-    }
-  }
-
   return (
     <Modal className="issue-detail-modal" label={issue.title} onClose={onClose}>
       <div className="issue-modal-head">
@@ -503,89 +452,16 @@ function IssueDetail({
             ))}
           </Label>
         )}
-        {issue.suggestionAvailable !== false && issue.level !== 'pending' && (
-          <Label
-            title="수정안"
-            help={
-              issue.canRegenerate === false
-                ? '규칙에 따라 정해진 수정안입니다.'
-                : '새 수정안은 적용하기 전까지 본문에 반영되지 않습니다.'
-            }
-            actions={
-              <div className="suggestion-toolbar">
-                <Button
-                  size="sm"
-                  variant="tertiary"
-                  disabled={isLocked || issue.canRegenerate === false || regenerate.isPending}
-                  onClick={async () => {
-                    const response = await regenerate.mutateAsync(issue.id);
-                    setSuggestion(response.suggestion);
-                  }}
-                >
-                  <RefreshCw />
-                  다른 수정안 받기
-                </Button>
-                <Button
-                  size="sm"
-                  disabled={isLocked || !suggestion.trim()}
-                  onClick={() => setDraft(suggestion)}
-                >
-                  수정안 적용
-                </Button>
-              </div>
-            }
-          >
-            <div className="suggestion-preview">{suggestion}</div>
-          </Label>
-        )}
-        <Label title="최종 적용 문장">
-          <textarea
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-            aria-label="최종 적용 문장"
-            disabled={isLocked || (issue.level === 'pending' && !issue.location)}
-          />
-          {issue.level === 'pending' && !issue.location && (
-            <p className="field-help">
-              문서 내 위치를 특정할 수 없는 판단 보류 이슈는 문장을 직접 수정할 수 없습니다.
-            </p>
+        {issue.suggestionAvailable !== false &&
+          issue.level !== 'pending' &&
+          Boolean(issue.suggestion.trim()) && (
+            <Label title="수정안">
+              <div className="suggestion-preview">{issue.suggestion}</div>
+            </Label>
           )}
-        </Label>
-        {error && (
-          <div className="inline-error" role="alert">
-            {error}
-          </div>
-        )}
       </div>
-      <div className="modal-actions split-actions">
-        <Button variant="tertiary" onClick={onClose}>
-          닫기
-        </Button>
-        <div>
-          <Button
-            variant="secondary"
-            disabled={save.isPending}
-            onClick={() =>
-              persist({ status: issue.status === 'ignored' ? 'open' : 'ignored' }, true)
-            }
-          >
-            {issue.status === 'ignored' ? '무시 해제' : '무시'}
-          </Button>
-          <Button
-            disabled={
-              save.isPending ||
-              issue.status === 'ignored' ||
-              (!canApply && issue.status !== 'resolved')
-            }
-            onClick={() =>
-              issue.status === 'resolved'
-                ? persist({ status: 'open', appliedText: null })
-                : persist({ status: 'resolved', appliedText: draft }, true)
-            }
-          >
-            {save.isPending ? '저장 중…' : issue.status === 'resolved' ? '적용 취소' : '적용'}
-          </Button>
-        </div>
+      <div className="modal-actions">
+        <Button onClick={onConfirm}>확인</Button>
       </div>
     </Modal>
   );
@@ -595,7 +471,6 @@ function DocumentPaper({
   result,
   issues,
   onIssue,
-  renderText,
   zoom = 100,
   fullscreen = false,
   scrollContainerRef,
@@ -603,7 +478,6 @@ function DocumentPaper({
   result: AnalysisResult;
   issues: Issue[];
   onIssue: (issue: Issue) => void;
-  renderText: (text: string, issueId?: string) => string;
   zoom?: number;
   fullscreen?: boolean;
   scrollContainerRef?: RefObject<HTMLDivElement | null>;
@@ -633,12 +507,8 @@ function DocumentPaper({
                   const issue = issues.find((item) => item.id === segment.issueId);
                   const level = issue?.level ?? segment.level;
                   return issue ? (
-                    <mark
-                      key={segmentIndex}
-                      className={`${level} ${issue.status}`}
-                      onClick={() => onIssue(issue)}
-                    >
-                      {renderText(segment.text, segment.issueId)}
+                    <mark key={segmentIndex} className={level} onClick={() => onIssue(issue)}>
+                      {segment.text}
                     </mark>
                   ) : (
                     segment.text
@@ -712,35 +582,11 @@ function Status({ level }: { level: Severity }) {
     </span>
   );
 }
-function Label({
-  title,
-  help,
-  actions,
-  children,
-}: {
-  title: string;
-  help?: string;
-  actions?: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  const helpId = useId();
+function Label({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="modal-section">
       <div className="modal-section-title">
-        <div className="modal-section-heading">
-          <h3>{title}</h3>
-          {help && (
-            <span className="section-info">
-              <button type="button" aria-label={`${title} 안내`} aria-describedby={helpId}>
-                <Info />
-              </button>
-              <span className="section-info__tooltip" id={helpId} role="tooltip">
-                {help}
-              </span>
-            </span>
-          )}
-        </div>
-        {actions}
+        <h3>{title}</h3>
       </div>
       {children}
     </section>

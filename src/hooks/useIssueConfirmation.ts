@@ -32,10 +32,12 @@ export function useIssueConfirmation(issues: Issue[]) {
     });
   }, [issues, state]);
 
-  function toggle(issueId: string) {
+  function setConfirmation(issueId: string, next: (confirmed: boolean) => boolean) {
     setState((current) => {
+      const wasConfirmed = current.confirmed.has(issueId);
+      const nowConfirmed = next(wasConfirmed);
+      if (wasConfirmed === nowConfirmed) return current;
       const confirmed = new Set(current.confirmed);
-      const nowConfirmed = !confirmed.has(issueId);
       if (nowConfirmed) confirmed.add(issueId);
       else confirmed.delete(issueId);
 
@@ -47,5 +49,10 @@ export function useIssueConfirmation(issues: Issue[]) {
     });
   }
 
-  return { confirmed: state.confirmed, orderedIssues, toggle };
+  return {
+    confirmed: state.confirmed,
+    orderedIssues,
+    toggle: (issueId: string) => setConfirmation(issueId, (current) => !current),
+    confirm: (issueId: string) => setConfirmation(issueId, () => true),
+  };
 }

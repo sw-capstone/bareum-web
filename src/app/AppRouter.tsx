@@ -383,7 +383,6 @@ function ResultRoute() {
     <ResultPage
       key={id}
       result={query.data}
-      analysisId={id}
       onFinish={() =>
         completeAnalysis({
           id,

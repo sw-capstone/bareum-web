@@ -1,6 +1,5 @@
 import { QueryClient, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { analysisApi, type AnalysisRequest } from '../services/analysisApi';
-import type { Issue } from '../types';
 
 export const analysisKeys = {
   all: ['analyses'] as const,
@@ -72,18 +71,5 @@ export function useAnalysisResult(id: string) {
     queryFn: ({ signal }) => analysisApi.getResult(id, signal),
     enabled: Boolean(id),
     staleTime: 5 * 60 * 1000,
-  });
-}
-
-export function useSaveIssueChanges(analysisId: string) {
-  return useMutation({
-    mutationFn: ({ issueId, patch }: { issueId: string; patch: Partial<Issue> }) =>
-      analysisApi.updateIssue(analysisId, issueId, patch),
-  });
-}
-
-export function useRegenerateSuggestion(analysisId: string) {
-  return useMutation({
-    mutationFn: (issueId: string) => analysisApi.regenerateSuggestion(analysisId, issueId),
   });
 }

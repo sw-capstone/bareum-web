@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { sampleResult } from '../../mocks/analysis';
@@ -6,26 +6,13 @@ import { ResultPage } from './ResultPage';
 
 const { exportMutateAsync } = vi.hoisted(() => ({ exportMutateAsync: vi.fn() }));
 
-vi.mock('../../hooks/useAnalysis', () => ({
-  useSaveIssueChanges: () => ({
-    isPending: false,
-    mutateAsync: vi.fn(),
-  }),
-  useRegenerateSuggestion: () => ({ isPending: false, mutateAsync: vi.fn() }),
-}));
-
 vi.mock('../../hooks/useExport', () => ({
   useExport: () => ({ mutateAsync: exportMutateAsync }),
 }));
 
 function renderResult(analysisId = sampleResult.id) {
   return render(
-    <ResultPage
-      key={analysisId}
-      result={{ ...sampleResult, id: analysisId }}
-      analysisId={analysisId}
-      onFinish={vi.fn()}
-    />,
+    <ResultPage key={analysisId} result={{ ...sampleResult, id: analysisId }} onFinish={vi.fn()} />,
   );
 }
 
@@ -84,7 +71,6 @@ describe('ResultPage document view', () => {
       <ResultPage
         key="empty-analysis"
         result={{ ...sampleResult, issues: [] }}
-        analysisId="empty-analysis"
         onFinish={vi.fn()}
       />,
     );
@@ -94,13 +80,7 @@ describe('ResultPage document view', () => {
 
   it('수정안이 없는 일반 이슈는 기존 요약을 카드에 표시한다', () => {
     const issue = { ...sampleResult.issues[0], suggestionAvailable: false };
-    render(
-      <ResultPage
-        result={{ ...sampleResult, issues: [issue] }}
-        analysisId="no-suggestion"
-        onFinish={vi.fn()}
-      />,
-    );
+    render(<ResultPage result={{ ...sampleResult, issues: [issue] }} onFinish={vi.fn()} />);
 
     expect(
       within(screen.getByRole('region', { name: '이슈 목록' })).getByText(issue.summary),
@@ -151,7 +131,6 @@ describe('ResultPage document view', () => {
     render(
       <ResultPage
         result={{ ...sampleResult, issues: [...sampleResult.issues, additionalPending] }}
-        analysisId="two-pending"
         onFinish={vi.fn()}
       />,
     );
@@ -222,7 +201,6 @@ describe('ResultPage document view', () => {
       <ResultPage
         key="analysis-2"
         result={{ ...sampleResult, id: 'analysis-2' }}
-        analysisId="analysis-2"
         onFinish={vi.fn()}
       />,
     );
@@ -252,129 +230,90 @@ describe('ResultPage document view', () => {
     expect(screen.getByRole('progressbar', { name: '다운로드 진행률' })).toBeVisible();
   });
 
-  it('위치를 특정할 수 없는 판단보류 이슈는 최종 적용 문장을 수정할 수 없다', async () => {
+  it('일반 이슈 상세는 원문과 수정안 하나만 읽고 확인할 수 있다', async () => {
     renderResult();
+    const issue = sampleResult.issues[0];
+    const cardSwitch = screen.getByRole('switch', { name: `${issue.title} 확인` });
 
-    await userEvent.click(
-      screen.getByRole('button', {
-        name: /원문 위치와 셀 구조를 특정할 수 없어 표 관련 검사를 수행하지 못했습니다/,
-      }),
-    );
-
-    expect(screen.getByRole('textbox', { name: '최종 적용 문장' })).toBeDisabled();
+    await userEvent.click(screen.getByRole('button', { name: /본 사업은.*지방재정법/ }));
+    const detail = screen.getByRole('dialog', { name: issue.title });
+    expect(within(detail).getByText(issue.original)).toBeVisible();
+    expect(within(detail).getByText(issue.explanation)).toBeVisible();
+    expect(within(detail).getByText(issue.suggestion)).toBeVisible();
+    expect(within(detail).queryByRole('textbox')).not.toBeInTheDocument();
     expect(
-      screen.getByText(
-        '문서 내 위치를 특정할 수 없는 판단 보류 이슈는 문장을 직접 수정할 수 없습니다.',
-      ),
-    ).toBeVisible();
+      within(detail).queryByRole('button', { name: /무시|수정안 적용|다른 수정안 받기/ }),
+    ).not.toBeInTheDocument();
+
+    await userEvent.click(within(detail).getByRole('button', { name: '확인' }));
+    expect(screen.queryByRole('dialog', { name: issue.title })).not.toBeInTheDocument();
+    expect(cardSwitch).toHaveAttribute('aria-checked', 'true');
+    expect(cardSwitch.closest('.issue-card')).toHaveClass('is-confirmed');
+    expect(screen.getByText('7건 중 1건 확인')).toBeVisible();
+    expect(document.querySelector('.paper')).toHaveTextContent(issue.original);
   });
 
-  it('이슈를 무시하면 상태를 갱신하고 상세 화면을 닫는다', async () => {
+  it('판단 보류 상세도 확인 버튼으로 해당 카드 토글을 켠다', async () => {
     renderResult();
+    const issue = sampleResult.issues[6];
 
     await userEvent.click(
-      screen.getByRole('button', {
-        name: /원문 위치와 셀 구조를 특정할 수 없어 표 관련 검사를 수행하지 못했습니다/,
-      }),
+      screen.getByRole('button', { name: /원문 위치와 셀 구조를 특정할 수 없어/ }),
     );
-    await userEvent.click(screen.getByRole('button', { name: '무시' }));
-
-    await waitFor(() =>
-      expect(
-        screen.queryByRole('dialog', { name: '표 검사 결과 확인 필요' }),
-      ).not.toBeInTheDocument(),
-    );
+    const detail = screen.getByRole('dialog', { name: issue.title });
+    expect(within(detail).getByText(issue.pendingReason!)).toBeVisible();
+    expect(within(detail).getByText(issue.userChecks![0])).toBeVisible();
     expect(
-      screen.getByRole('button', {
-        name: /원문 위치와 셀 구조를 특정할 수 없어 표 관련 검사를 수행하지 못했습니다/,
-      }),
-    ).toBeVisible();
+      within(detail).queryByRole('heading', { name: '최종 적용 문장' }),
+    ).not.toBeInTheDocument();
+    expect(within(detail).getByRole('button', { name: '확인' })).toBeEnabled();
+
+    await userEvent.click(within(detail).getByRole('button', { name: '확인' }));
+    expect(screen.getByRole('switch', { name: `${issue.title} 확인` })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    );
   });
 
-  it('수정안 적용을 선택해야 최종 적용 문장에 제안 내용을 복사한다', async () => {
+  it('X로 닫으면 확인 상태가 유지되고 이미 확인한 카드의 확인 버튼은 해제하지 않는다', async () => {
     renderResult();
+    const issue = sampleResult.issues[0];
+    const card = screen.getByRole('button', { name: /본 사업은.*지방재정법/ });
+    const cardSwitch = screen.getByRole('switch', { name: `${issue.title} 확인` });
 
+    await userEvent.click(card);
     await userEvent.click(
-      screen.getByRole('button', {
-        name: /본 사업은.*지방재정법/,
+      within(screen.getByRole('dialog', { name: issue.title })).getByRole('button', {
+        name: '닫기',
       }),
     );
+    expect(cardSwitch).toHaveAttribute('aria-checked', 'false');
 
-    const finalSentence = screen.getByRole('textbox', { name: '최종 적용 문장' });
-    expect(finalSentence).toHaveValue('');
-    expect(document.querySelector('.comparison')).not.toBeInTheDocument();
+    await userEvent.click(cardSwitch);
+    await userEvent.click(card);
+    await userEvent.click(
+      within(screen.getByRole('dialog', { name: issue.title })).getByRole('button', {
+        name: '닫기',
+      }),
+    );
+    expect(cardSwitch).toHaveAttribute('aria-checked', 'true');
 
-    await userEvent.click(screen.getByRole('button', { name: '수정안 적용' }));
-
-    expect(finalSentence).toHaveValue(sampleResult.issues[0].suggestion);
+    await userEvent.click(card);
+    await userEvent.click(
+      within(screen.getByRole('dialog', { name: issue.title })).getByRole('button', {
+        name: '확인',
+      }),
+    );
+    expect(cardSwitch).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByText('7건 중 1건 확인')).toBeVisible();
   });
 
-  it('수정안 반영 안내를 제목 옆 정보 팁으로 제공한다', async () => {
+  it('기존 결과에 적용 문장이 있어도 문서에는 업로드한 원문을 표시한다', () => {
     renderResult();
+    const original = sampleResult.sections[3].paragraphs[0][1].text;
 
-    await userEvent.click(
-      screen.getByRole('button', {
-        name: /본 사업은.*지방재정법/,
-      }),
-    );
-
-    const helpButton = screen.getByRole('button', { name: '수정안 안내' });
-    const tooltip = screen.getByRole('tooltip');
-    expect(helpButton).toHaveAttribute('aria-describedby', tooltip.id);
-    expect(tooltip).toHaveTextContent('새 수정안은 적용하기 전까지 본문에 반영되지 않습니다.');
-  });
-
-  it('적용 완료 문장은 잠그고 적용 취소 후 상세 화면에서 다시 편집할 수 있게 한다', async () => {
-    renderResult();
-
-    await userEvent.click(
-      screen.getByRole('button', {
-        name: /\(별첨 3\)에 정리한다/,
-      }),
-    );
-
-    const finalSentence = screen.getByRole('textbox', { name: '최종 적용 문장' });
-    expect(finalSentence).toBeDisabled();
-    expect(screen.getByRole('button', { name: '다른 수정안 받기' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: '수정안 적용' })).toBeDisabled();
-
-    await userEvent.click(screen.getByRole('button', { name: '적용 취소' }));
-
-    await waitFor(() => expect(finalSentence).toBeEnabled());
-    expect(screen.getByRole('dialog', { name: '표기 통일' })).toBeVisible();
-    expect(screen.getByRole('button', { name: '다른 수정안 받기' })).toBeEnabled();
-    expect(screen.getByRole('button', { name: '수정안 적용' })).toBeEnabled();
-    expect(screen.getByRole('button', { name: '적용' })).toBeEnabled();
-  });
-
-  it('무시한 이슈는 수정 기능을 잠그고 무시 해제 후 다시 활성화한다', async () => {
-    renderResult();
-
-    const issueCard = screen.getByRole('button', {
-      name: /본 사업은.*지방재정법/,
-    });
-    await userEvent.click(issueCard);
-    await userEvent.click(screen.getByRole('button', { name: '무시' }));
-
-    await userEvent.click(
-      screen.getByRole('button', {
-        name: /본 사업은.*지방재정법/,
-      }),
-    );
-    expect(screen.getByRole('textbox', { name: '최종 적용 문장' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: '다른 수정안 받기' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: '수정안 적용' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: '적용' })).toBeDisabled();
-
-    await userEvent.click(screen.getByRole('button', { name: '무시 해제' }));
-    await userEvent.click(
-      screen.getByRole('button', {
-        name: /본 사업은.*지방재정법/,
-      }),
-    );
-    expect(screen.getByRole('textbox', { name: '최종 적용 문장' })).toBeEnabled();
-    expect(screen.getByRole('button', { name: '다른 수정안 받기' })).toBeEnabled();
-    expect(screen.getByRole('button', { name: '수정안 적용' })).toBeEnabled();
+    expect(document.querySelector('.paper')).toHaveTextContent(original);
+    expect(document.querySelector('.paper')).not.toHaveTextContent('(별첨 3)에 정리한다.');
   });
 
   it('수정 끝내기를 누르면 최종 리포트 생성 진행 상태를 표시한다', async () => {

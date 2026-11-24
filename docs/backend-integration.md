@@ -124,21 +124,11 @@ Google 신규 가입의 이메일·이름은 서버가 ID Token에서 확인한 
 
 서버의 공개 API 계약이 확정되면 `bareum-server/packages/contracts/`에서 관리하고, 프론트는 필요한 공개 필드·상태·오류 형식을 `src/services/contracts.ts`에서 검증합니다. 계약 변경 시 서버 원본과 화면 소비 코드를 함께 검토합니다.
 
-이슈는 `sectionId`와 `location`을 선택값으로 전달합니다. 두 값이 없는 문서 전체 이슈는 목록과 목차의 최상단에 표시합니다. 상세 화면에 필요한 `checkArea`, `locationOrder`, `pendingReason`, `userChecks`, `suggestionAvailable`, `canRegenerate`, `appliedText`를 선택적으로 포함합니다. 근거 항목은 `source`, `quote` 외에 근거 유형 `type`과 원문 주소 `url`을 포함할 수 있습니다.
+이슈는 `sectionId`와 `location`을 선택값으로 전달합니다. 두 값이 없는 문서 전체 이슈는 목록과 목차의 최상단에 표시합니다. 읽기 전용 상세 화면에는 `checkArea`, `locationOrder`, `pendingReason`, `userChecks`, `suggestionAvailable`를 선택적으로 사용합니다. 근거 항목은 `source`, `quote` 외에 근거 유형 `type`과 원문 주소 `url`을 포함할 수 있습니다. 기존 응답의 `canRegenerate`, `appliedText`, `status`는 파싱하되 확인 여부나 문서 내용 변경에 사용하지 않습니다.
 
-### 이슈 상태 변경
+### 이슈 확인 상태
 
-`PATCH /analyses/:analysisId/issues/:issueId`
-
-요청은 사용자 행동에 따라 상태와 작업본 문장을 함께 전달합니다.
-
-```json
-{ "status": "resolved", "appliedText": "최종 적용 문장" }
-```
-
-`status`는 `open | resolved | ignored`입니다. 적용 취소는 `{ "status": "open" }`, 무시 해제도 `{ "status": "open" }`으로 요청합니다. 각 버튼 요청은 즉시 저장되며 별도의 일괄 저장 API는 사용하지 않습니다.
-
-`POST /analyses/:analysisId/issues/:issueId/suggestion`은 다른 수정안 하나를 생성하고 `{ "suggestion": "string" }`을 반환합니다. 규칙에 따라 수정안이 고정된 이슈는 화면에서 요청 버튼을 비활성화합니다.
+이슈 카드 토글과 상세 화면의 `확인` 버튼은 결과 화면 안의 프론트 상태만 바꿉니다. 분석 기록에 저장하지 않으며, 이슈 상태 변경·수정안 재생성 API를 호출하지 않습니다. 문서 원문과 내보내기 데이터도 변경하지 않습니다.
 
 ### 파일 내보내기
 
