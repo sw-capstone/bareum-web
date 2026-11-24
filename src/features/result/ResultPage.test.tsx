@@ -1,32 +1,21 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { sampleResult } from '../../mocks/analysis';
 import { ResultPage } from './ResultPage';
-
-const { exportMutateAsync } = vi.hoisted(() => ({ exportMutateAsync: vi.fn() }));
-
-vi.mock('../../hooks/useExport', () => ({
-  useExport: () => ({ mutateAsync: exportMutateAsync }),
-}));
+import { resultReportApi } from '../../services/resultReportApi';
 
 function renderResult(analysisId = sampleResult.id) {
-  return render(
-    <ResultPage key={analysisId} result={{ ...sampleResult, id: analysisId }} onFinish={vi.fn()} />,
-  );
+  return render(<ResultPage key={analysisId} result={{ ...sampleResult, id: analysisId }} />);
 }
 
 describe('ResultPage document view', () => {
-  beforeEach(() => {
-    exportMutateAsync.mockReset();
-    exportMutateAsync.mockResolvedValue(undefined);
-  });
-
   it('처음에는 결과 대시보드를 표시하고 전체보기는 열지 않는다', () => {
     renderResult();
 
     expect(screen.queryByText('종합 점수')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /수정 끝내기/ })).toBeVisible();
+    expect(screen.getByRole('button', { name: '결과 리포트' })).toBeVisible();
+    expect(screen.queryByRole('button', { name: '수정 끝내기' })).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: '문서 목차' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: '문서 목차 열기' })).toHaveAttribute(
       'aria-expanded',
@@ -67,20 +56,14 @@ describe('ResultPage document view', () => {
       within(screen.getByRole('region', { name: '판단 보류' })).getByText('1건'),
     ).toBeVisible();
 
-    view.rerender(
-      <ResultPage
-        key="empty-analysis"
-        result={{ ...sampleResult, issues: [] }}
-        onFinish={vi.fn()}
-      />,
-    );
+    view.rerender(<ResultPage key="empty-analysis" result={{ ...sampleResult, issues: [] }} />);
     expect(screen.getByText('판단 보류 이슈가 없습니다.')).toBeVisible();
     expect(screen.getByText('해당하는 이슈가 없습니다.')).toBeVisible();
   });
 
   it('수정안이 없는 일반 이슈는 기존 요약을 카드에 표시한다', () => {
     const issue = { ...sampleResult.issues[0], suggestionAvailable: false };
-    render(<ResultPage result={{ ...sampleResult, issues: [issue] }} onFinish={vi.fn()} />);
+    render(<ResultPage result={{ ...sampleResult, issues: [issue] }} />);
 
     expect(
       within(screen.getByRole('region', { name: '이슈 목록' })).getByText(issue.summary),
@@ -131,7 +114,6 @@ describe('ResultPage document view', () => {
     render(
       <ResultPage
         result={{ ...sampleResult, issues: [...sampleResult.issues, additionalPending] }}
-        onFinish={vi.fn()}
       />,
     );
     const pending = screen.getByRole('region', { name: '판단 보류' });
@@ -197,37 +179,36 @@ describe('ResultPage document view', () => {
     await userEvent.click(screen.getByRole('button', { name: '문서 전체보기' }));
     expect(screen.getByRole('dialog', { name: '문서 전체보기' })).toBeVisible();
 
-    view.rerender(
-      <ResultPage
-        key="analysis-2"
-        result={{ ...sampleResult, id: 'analysis-2' }}
-        onFinish={vi.fn()}
-      />,
-    );
+    view.rerender(<ResultPage key="analysis-2" result={{ ...sampleResult, id: 'analysis-2' }} />);
 
     expect(screen.queryByRole('dialog', { name: '문서 전체보기' })).not.toBeInTheDocument();
   });
 
-  it('내보내기 버튼 아래에서 메뉴를 열고 배경을 가리지 않는다', async () => {
+  it('결과 리포트를 이슈 확인 없이 열고 점수와 이슈를 보여준다', async () => {
     renderResult();
 
-    await userEvent.click(screen.getByRole('button', { name: '내보내기' }));
+    await userEvent.click(screen.getByRole('button', { name: '결과 리포트' }));
 
-    expect(screen.getByRole('dialog', { name: '내보내기 메뉴' })).toBeVisible();
-    expect(document.querySelector('.overlay')).not.toBeInTheDocument();
-    expect(screen.getByLabelText('파일 형식')).toHaveValue('PDF');
+    const report = await screen.findByRole('dialog', { name: '결과 리포트' });
+    expect(within(report).getByText(`${sampleResult.score}점`)).toBeVisible();
+    expect(within(report).getByText(sampleResult.issues[0].title)).toBeVisible();
+    expect(screen.queryByRole('button', { name: '다운로드' })).not.toBeInTheDocument();
   });
 
-  it('다운로드 중에는 버튼을 비활성화하고 메뉴 하단에 진행 상태를 표시한다', async () => {
-    exportMutateAsync.mockImplementation(() => new Promise(() => undefined));
+  it('리포트 생성 실패를 별도로 안내한다', async () => {
+    render(<ResultPage result={sampleResult} reportGenerationFailed />);
+    await userEvent.click(screen.getByRole('button', { name: '결과 리포트' }));
+    expect(screen.getByText('결과 리포트 생성에 실패했습니다')).toBeVisible();
+  });
+
+  it('리포트 조회 실패 후 다시 시도할 수 있다', async () => {
+    const get = vi.spyOn(resultReportApi, 'get').mockRejectedValueOnce(new Error('조회 실패'));
     renderResult();
-
-    await userEvent.click(screen.getByRole('button', { name: '내보내기' }));
-    await userEvent.click(screen.getByRole('button', { name: '다운로드' }));
-
-    expect(screen.getByRole('button', { name: '다운로드 중' })).toBeDisabled();
-    expect(screen.getByText('파일을 준비하고 있습니다')).toBeVisible();
-    expect(screen.getByRole('progressbar', { name: '다운로드 진행률' })).toBeVisible();
+    await userEvent.click(screen.getByRole('button', { name: '결과 리포트' }));
+    expect(await screen.findByText('결과 리포트를 불러오지 못했습니다')).toBeVisible();
+    get.mockRestore();
+    await userEvent.click(screen.getByRole('button', { name: '다시 시도' }));
+    expect(await screen.findByText(`${sampleResult.score}점`)).toBeVisible();
   });
 
   it('일반 이슈 상세는 원문과 수정안 하나만 읽고 확인할 수 있다', async () => {
@@ -314,15 +295,5 @@ describe('ResultPage document view', () => {
 
     expect(document.querySelector('.paper')).toHaveTextContent(original);
     expect(document.querySelector('.paper')).not.toHaveTextContent('(별첨 3)에 정리한다.');
-  });
-
-  it('수정 끝내기를 누르면 최종 리포트 생성 진행 상태를 표시한다', async () => {
-    renderResult();
-
-    await userEvent.click(screen.getByRole('button', { name: /수정 끝내기/ }));
-
-    expect(screen.getByRole('dialog', { name: '분석 완료' })).toBeVisible();
-    expect(screen.getByText('최종 분석 리포트를 생성하고 있습니다')).toBeVisible();
-    expect(screen.getByLabelText('리포트 생성 진행률')).toBeVisible();
   });
 });
