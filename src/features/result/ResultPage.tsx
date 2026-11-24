@@ -1,4 +1,12 @@
-import { useEffect, useId, useMemo, useRef, useState, type RefObject } from 'react';
+import {
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type RefObject,
+} from 'react';
 import {
   ChevronDown,
   ExternalLink,
@@ -39,6 +47,8 @@ export function ResultPage({
   const [section, setSection] = useState(result.sections[0]?.id ?? '');
   const [tocOpen, setTocOpen] = useState(false);
   const documentScrollRef = useRef<HTMLDivElement>(null);
+  const dashboardRef = useRef<HTMLDivElement>(null);
+  const previousCardPositions = useRef(new Map<string, DOMRect>());
   const [zoom, setZoom] = useState(100);
   const [fullscreen, setFullscreen] = useState(false);
   const [finishOpen, setFinishOpen] = useState(false);
@@ -62,6 +72,39 @@ export function ResultPage({
       ),
     [workspace.issues],
   );
+
+  useLayoutEffect(() => {
+    const previous = previousCardPositions.current;
+    if (!previous.size) return;
+    previousCardPositions.current = new Map();
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+
+    dashboardRef.current
+      ?.querySelectorAll<HTMLElement>('.issue-card[data-issue-id]')
+      .forEach((card) => {
+        const before = previous.get(card.dataset.issueId ?? '');
+        if (!before) return;
+        const after = card.getBoundingClientRect();
+        const x = before.left - after.left;
+        const y = before.top - after.top;
+        if (Math.abs(x) < 1 && Math.abs(y) < 1) return;
+        card.animate?.(
+          [{ transform: `translate(${x}px, ${y}px)` }, { transform: 'translate(0, 0)' }],
+          { duration: 550, easing: 'cubic-bezier(0.42, 0, 0.58, 1)' },
+        );
+      });
+  }, [confirmation.orderedIssues]);
+
+  function toggleIssueConfirmation(issueId: string) {
+    const positions = new Map<string, DOMRect>();
+    dashboardRef.current
+      ?.querySelectorAll<HTMLElement>('.issue-card[data-issue-id]')
+      .forEach((card) => {
+        if (card.dataset.issueId) positions.set(card.dataset.issueId, card.getBoundingClientRect());
+      });
+    previousCardPositions.current = positions;
+    confirmation.toggle(issueId);
+  }
 
   useEffect(() => {
     if (!finishOpen || finishComplete) return;
@@ -154,7 +197,7 @@ export function ResultPage({
         </div>
       </section>
 
-      <div className={`dashboard${tocOpen ? ' dashboard--toc-open' : ''}`}>
+      <div ref={dashboardRef} className={`dashboard${tocOpen ? ' dashboard--toc-open' : ''}`}>
         <aside className="toc panel" id="result-toc" aria-label="문서 목차" hidden={!tocOpen}>
           <h2>문서 목차</h2>
           {workspace.issues.some((issue) => !issue.location) && (
@@ -246,7 +289,7 @@ export function ResultPage({
                     issue={issue}
                     key={issue.id}
                     confirmed={confirmation.confirmed.has(issue.id)}
-                    onToggle={() => confirmation.toggle(issue.id)}
+                    onToggle={() => toggleIssueConfirmation(issue.id)}
                     onSelect={selectIssue}
                   />
                 ))
@@ -285,7 +328,7 @@ export function ResultPage({
                     issue={issue}
                     key={issue.id}
                     confirmed={confirmation.confirmed.has(issue.id)}
-                    onToggle={() => confirmation.toggle(issue.id)}
+                    onToggle={() => toggleIssueConfirmation(issue.id)}
                     onSelect={selectIssue}
                   />
                 ))
@@ -637,7 +680,7 @@ function IssueCard({
         : issue.suggestion?.trim() || issue.summary;
 
   return (
-    <article className={`issue-card${confirmed ? ' is-confirmed' : ''}`}>
+    <article className={`issue-card${confirmed ? ' is-confirmed' : ''}`} data-issue-id={issue.id}>
       <div className="issue-card__top">
         <Status level={issue.level} />
         <button
