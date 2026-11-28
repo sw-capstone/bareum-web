@@ -24,12 +24,11 @@ type LoginPageProps = {
     password: string;
     keepSignedIn: boolean;
   }) => Promise<void>;
-  onForgotPassword?: () => void;
   onSignup?: () => void;
   onGoogleLogin?: (idToken: string) => Promise<void>;
 };
 
-export function LoginPage({ onLogin, onForgotPassword, onSignup, onGoogleLogin }: LoginPageProps) {
+export function LoginPage({ onLogin, onSignup, onGoogleLogin }: LoginPageProps) {
   const [email, setEmail] = useState('');
   const [pw, setPw] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -134,8 +133,13 @@ export function LoginPage({ onLogin, onForgotPassword, onSignup, onGoogleLogin }
           </label>
           <div className="form-row">
             {!liveAuth && <Checkbox checked={keep} onChange={setKeep} label="로그인 상태 유지" />}
-            <button type="button" className="text-link" onClick={onForgotPassword}>
-              비밀번호 찾기
+            <button
+              type="button"
+              className="text-link"
+              disabled
+              title="MVP에서 지원하지 않는 기능입니다"
+            >
+              비밀번호 찾기 (준비 중)
             </button>
           </div>
           <Button size="lg" type="submit" disabled={isSubmitting}>

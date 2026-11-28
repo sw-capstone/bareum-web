@@ -25,20 +25,19 @@ describe('로그인 화면 인증 페이지 이동', () => {
     expect(screen.getByRole('heading', { name: '회원가입' })).toBeInTheDocument();
   });
 
-  it('비밀번호 찾기를 누르면 비밀번호 찾기 페이지로 이동한다', async () => {
+  it('비밀번호 찾기 주소로 직접 들어와도 로그인 화면으로 돌아간다', async () => {
     render(
       <SessionProvider>
         <SignupFlowProvider>
-          <MemoryRouter initialEntries={['/login']}>
+          <MemoryRouter initialEntries={['/forgot-password']}>
             <AppRouter />
           </MemoryRouter>
         </SignupFlowProvider>
       </SessionProvider>,
     );
 
-    await userEvent.click(screen.getByRole('button', { name: '비밀번호 찾기' }));
-
-    expect(screen.getByRole('heading', { name: '비밀번호 찾기' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: '로그인' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: '비밀번호 찾기' })).not.toBeInTheDocument();
   });
 
   it('로그인하지 않은 사용자의 보호 화면 접근을 차단한다', () => {

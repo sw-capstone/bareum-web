@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, CheckCircle2, KeyRound, Link2, Mail, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, KeyRound, Link2, Mail, ShieldCheck } from 'lucide-react';
 import { Button } from '../../components/ui';
 import { useSession } from '../../contexts/session';
 import { authApi, type VerifiedEmail } from '../../services/authApi';
@@ -14,7 +14,6 @@ export function SettingsPage({ onBack }: { onBack: () => void }) {
   const [verifiedEmail, setVerifiedEmail] = useState<VerifiedEmail | null>(null);
   const [password, setPassword] = useState('');
   const [confirmation, setConfirmation] = useState('');
-  const [googleConnected, setGoogleConnected] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -86,23 +85,17 @@ export function SettingsPage({ onBack }: { onBack: () => void }) {
           </span>
           <div>
             <h2>간편 로그인</h2>
-            <p>Google 계정을 연결해 간편하게 로그인할 수 있습니다.</p>
+            <p>Google 계정 연결 기능은 준비 중입니다.</p>
           </div>
         </div>
         <div className="settings-action-row">
           <div className="settings-action-copy">
             <strong>Google 계정</strong>
-            <small>
-              {googleConnected ? 'Google 계정이 연결되었습니다.' : '연결된 계정이 없습니다.'}
-            </small>
+            <small>현재 계정 연결을 지원하지 않습니다.</small>
           </div>
-          <Button
-            variant={googleConnected ? 'secondary' : 'primary'}
-            disabled={googleConnected}
-            onClick={() => setGoogleConnected(true)}
-          >
-            {googleConnected ? <CheckCircle2 /> : <Link2 />}
-            {googleConnected ? '연결 완료' : '계정 연결하기'}
+          <Button variant="secondary" disabled>
+            <Link2 />
+            계정 연결하기
           </Button>
         </div>
       </section>

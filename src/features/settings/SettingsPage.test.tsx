@@ -54,8 +54,7 @@ describe('SettingsPage', () => {
     expect(screen.getByRole('button', { name: '메일 전송' })).toBeDisabled();
   });
 
-  it('Google 간편 로그인 연결 상태를 표시한다', async () => {
-    const user = userEvent.setup();
+  it('Google 계정 연결은 인증 기능이 준비될 때까지 비활성화한다', () => {
     render(
       <SessionContext.Provider
         value={{
@@ -69,8 +68,8 @@ describe('SettingsPage', () => {
       </SessionContext.Provider>,
     );
 
-    await user.click(screen.getByRole('button', { name: /계정 연결하기/ }));
-    expect(screen.getByRole('button', { name: /연결 완료/ })).toBeDisabled();
-    expect(screen.getByText('Google 계정이 연결되었습니다.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /계정 연결하기/ })).toBeDisabled();
+    expect(screen.getByText('현재 계정 연결을 지원하지 않습니다.')).toBeInTheDocument();
+    expect(screen.queryByText('Google 계정이 연결되었습니다.')).not.toBeInTheDocument();
   });
 });
