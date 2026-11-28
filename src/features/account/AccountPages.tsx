@@ -28,10 +28,10 @@ export function LoginManagementPage({ onBack }: { onBack: () => void }) {
           <ShieldCheck />
         </div>
         <div>
-          <h2>Google 계정 연결됨</h2>
-          <p>현재 계정은 Google 로그인을 사용하고 있습니다.</p>
+          <h2>Google 계정 연결 준비 중</h2>
+          <p>현재 계정 연결 기능은 지원하지 않습니다.</p>
         </div>
-        <Button size="sm" variant="secondary">
+        <Button size="sm" variant="secondary" disabled>
           <ExternalLink /> Google에서 관리
         </Button>
       </section>

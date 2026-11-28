@@ -26,22 +26,14 @@ describe('LoginPage password field', () => {
     expect(screen.queryByRole('button', { name: '비밀번호 보기' })).not.toBeInTheDocument();
   });
 
-  it('회원가입과 비밀번호 찾기 동작을 전달한다', async () => {
+  it('회원가입은 열 수 있고 비밀번호 찾기는 비활성화한다', async () => {
     const onSignup = vi.fn();
-    const onForgotPassword = vi.fn();
-    render(
-      <LoginPage
-        onLogin={vi.fn().mockResolvedValue(undefined)}
-        onSignup={onSignup}
-        onForgotPassword={onForgotPassword}
-      />,
-    );
+    render(<LoginPage onLogin={vi.fn().mockResolvedValue(undefined)} onSignup={onSignup} />);
 
     await userEvent.click(screen.getByRole('button', { name: '회원가입' }));
-    await userEvent.click(screen.getByRole('button', { name: '비밀번호 찾기' }));
 
     expect(onSignup).toHaveBeenCalledOnce();
-    expect(onForgotPassword).toHaveBeenCalledOnce();
+    expect(screen.getByRole('button', { name: '비밀번호 찾기 (준비 중)' })).toBeDisabled();
   });
 
   it('입력한 자격 증명을 로그인 처리에 전달한다', async () => {

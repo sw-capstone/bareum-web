@@ -23,7 +23,6 @@ import {
 } from '../hooks/useAnalysis';
 import type { Screen } from '../types';
 import { LoginPage } from '../features/auth/LoginPage';
-import { PasswordResetPage } from '../features/auth/PasswordResetPage';
 import { SignupPage } from '../features/auth/SignupPage';
 import { TermsPage } from '../features/auth/TermsPage';
 import { useSignupFlow } from '../features/auth/signupFlow';
@@ -150,7 +149,6 @@ function LoginRoute() {
   if (user) return <Navigate to="/upload" replace />;
   return (
     <LoginPage
-      onForgotPassword={() => navigate('/forgot-password')}
       onLogin={async (credentials) => {
         const user = await authApi.login(credentials);
         clearAnalysisSession();
@@ -353,7 +351,7 @@ export function AppRouter() {
       <Route path="/login" element={<LoginRoute />} />
       <Route path="/signup" element={<SignupPage />} />
       <Route path="/terms" element={<TermsPage />} />
-      <Route path="/forgot-password" element={<PasswordResetPage />} />
+      <Route path="/forgot-password" element={<Navigate to="/login" replace />} />
       <Route element={<RequireSession />}>
         <Route path="/upload" element={<UploadRoute />} />
         <Route path="/settings" element={<SettingsRoute />} />

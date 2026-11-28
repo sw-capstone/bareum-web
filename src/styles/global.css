@@ -762,6 +762,10 @@ svg {
   cursor: pointer;
   padding: 0;
 }
+.text-link:disabled {
+  color: var(--fog-500);
+  cursor: not-allowed;
+}
 .or {
   display: flex;
   align-items: center;
