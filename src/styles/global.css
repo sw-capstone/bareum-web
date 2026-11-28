@@ -1848,9 +1848,8 @@ svg {
   gap: 12px;
   align-items: start;
   padding: 12px 14px;
-  border: 1px solid var(--fog-200);
-  border-left: 3px solid var(--fog-400);
-  border-radius: 3px;
+  border-top: 1px solid var(--fog-200);
+  border-bottom: 1px solid var(--fog-200);
   background: var(--white);
   margin-top: 7px;
 }
